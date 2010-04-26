@@ -1,6 +1,24 @@
 #ifndef MORSE_H
 #define MORSE_H
 
+/**
+ * @file
+ * @author Holger Schurig
+ *
+ * @section LICENSE
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details at
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
 
 #include <QObject>
 #include <QString>
@@ -10,76 +28,99 @@
 class QTimer;
 
 
+/*!
+ * \brief Class to generate and play morse code
+ */
 class GenerateMorse : public QObject {
 	Q_OBJECT
 
-/*
- * This section contains the code that stores the morse code, e.g. a
- * translation from "n" to "-." (dahdit). That's stored into "codes".
- *
- * The has "pronunciation" contains words that roughtly have the same
- * rhythm as the dahdits.
- */
 public:
 	GenerateMorse(QObject *parent=0);
 private:
 	void store(const QString &sign, const QString &code);
-	QHash<QString, QString> codes;            // e.g. "-.."
-
-/*
- * Here we append letters (or special morse-sign like AR / SK etc) into a
- * list of dah-dits ("morse") and a list of cleartext ("clearText"). This
- * can later be used to generate tones.
- */
+	/*! \brief Translation from characters to morse-code */
+	QHash<QString, QString> codes;
 public:
 	void append(const QString &s, bool addSpace=true);
 	void appendMorse(const QString &dahdits, const QString &clear);
-	int  totalElements(int from=0) const;
+	int  totalElements(int from=0) const; //!< Total elements in \ref morse.
 public slots:
 	void clear();
 private:
-	// Here we store elements of sound and silence:
-	// 1  one element sound
-	// -1 one element silence
-	// -7 seven elements silence
-	// 0  next clearText
+	/*!
+	 * \brief Morse storage
+	 *
+	 * Here we store elements of sound and silence. To make things
+	 * simple, we use positive values for sound and negative values for silence:
+	 * - 1  one element sound, representing a dit
+	 * - 3  three element sound, representing a dah
+	 * - -1 one element silence, represinting the silence inside between
+	 *      dits and dahs inside a character
+	 * - -3 three elements silence, representing the silence between two
+	 *      morse characters
+	 * - -7 seven elements silence, representing the silence between two
+	 *      word
+	 * - 0  next \ref clearText entry
+	 *
+	 * \sa playIdx
+	 */
 	QList<int> morse;
+	/*!
+	 * \brief Clear text storage
+	 *
+	 * Stores the clear text for each morse characters from \ref morse.
+	 * Whenever a \c 0 is found in \ref morse, the next entry from \ref
+	 * clearText will be be used in \ref charChanged().
+	 *
+	 * \sa clearIdx
+	 * \sa charChanged
+	 */
 	QList<QString> clearText;
 
-
-/*
- * This is finally used to actually play morse. As this class doesn't
- * play anything at all, it just emits signals, so other class(es) can
- * visualize / audiolize things.
- */
 public slots:
 	void play();
 	void stop();
 	void setLoop(bool b);
-	void setWpm(float wpm) { playWpm = wpm; };
-	void setDitFactor(float factor) { ditFactor = factor; };
-	void setDahFactor(float factor) { dahFactor = factor; };
-	void setIntraFactor(float factor) { intraFactor = factor; };
-	void setCharFactor(float factor) { charFactor = factor; };
-	void setWordFactor(float factor) { wordFactor = factor; };
+	void setWpm(float wpm);
+	void setDitFactor(float factor);
+	void setDahFactor(float factor);
+	void setIntraFactor(float factor);
+	void setCharFactor(float factor);
+	void setWordFactor(float factor);
 public:
 	float getWpm() const;
 signals:
-	void playSound(bool);
-	void playSound(unsigned int);
+	/*! \brief Emitted whenever the sound should be turned on or off */
+	void playSound(bool onoff);
+	/*! \brief Emitted whenever the sound should be turned on for for the specified
+	milliseconds */
+	void playSound(unsigned int ms);
+	/*! \brief Emitted whenever \ref play() finished. \sa play() */
 	void hasStopped();
+	/*! \brief Emitted whenever a new cleartext characters get's morsed */
 	void charChanged(const QString &);
+	/*! \brief Emitted whenever a new dit or dah get's morsed */
 	void symbolChanged(const QString &);
 private:
+	/*! \brief Index into \ref morse */
 	int playIdx;
+	/*! \brief Index into \ref clearText */
 	int clearIdx;
+	/*! \brief Timer for \ref play(), used to call \ref slotPlayNext() */
 	QTimer *playTimer;
+	/*! \brief Should \ref play() loop?  \sa setLoop() */
 	float playLoop;
+	/*! \brief Current replay speed \sa setWpm() */
 	float playWpm;
+	/*! \brief Current dit facto, normally 1.0. \sa setDitFactor() */
 	float ditFactor;
+	/*! \brief Current dah factor, normally 1.0. \sa setDahFactor() */
 	float dahFactor;
+	/*! \brief Current intra-character spacing, normally 1.0. \sa setIntraFactor() */
 	float intraFactor;
+	/*! \brief Current character spacing, normally 1.0. \sa setCharFactor() */
 	float charFactor;
+	/*! \brief Current word spacing, normally 1.0. \sa setWordFactor() */
 	float wordFactor;
 private slots:
 	void slotPlayNext();

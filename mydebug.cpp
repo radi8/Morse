@@ -1,6 +1,32 @@
 #define DEBUGLVL 0
 #include "mydebug.h"
 
+/**
+ * @file
+ * @author Holger Schurig
+ *
+ * @section DESCRIPTION
+ *
+ * Simple debugging aid for Qt/C++ programs.
+ *
+ * This file contains code to
+ * a) send Qt's debug output to syslog
+ * b) dump arbitrary memory regions as a hex dump
+ *
+ * @section LICENSE
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details at
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
 #include <qglobal.h>
 #include <stdio.h>		// for snprintf
 #include <stdlib.h>		// for abort
@@ -11,6 +37,16 @@
 #endif
 
 
+/*!
+ * Re-implemented MessageHandler for Qt
+ *
+ * This message-handler will be used by qDebug(), qWarning() etc, but also
+ * by myDebug() --- and this via MYDEBUG(), MYTRACE() and MYVERBOSE().
+ *
+ * All text will be sent to STDOUT (not STDERR, as the default
+ * message-handler from Qt!). If USE_SYSLOG is defined, the text will
+ * additionally be sent to the syslog facility.
+ */
 static void MessageHandler(QtMsgType type, const char *msg)
 {
 	const char *t = "Unknown: ";
@@ -67,10 +103,11 @@ void myDebug(const char *fmt, ...)
 }
 
 
-void dump(const unsigned char *p, int len, bool with_addr)
+void dump(const void *data, int len, bool with_addr)
 {
 	int i, thisline;
 	int offset = 0;
+	const unsigned char *p = (const unsigned char *)data;
 
 	while (offset < len) {
 		if (with_addr)
@@ -96,6 +133,7 @@ void dump(const unsigned char *p, int len, bool with_addr)
 }
 
 
+/*! Install MessageHandler() as Qt's message-handler */
 static void init_debug(void) __attribute__((__constructor__));
 
 static void init_debug(void)

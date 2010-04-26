@@ -1,6 +1,28 @@
 #define DEBUGLVL 0
 #include "mydebug.h"
 
+/**
+ * @file
+ * @author Holger Schurig, DH3HS
+ *
+ * @section DESCRIPTION
+ *
+ * Simple sine audio generator.
+ *
+ * @section LICENSE
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details at
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
 #include <QAudioOutput>
 #include <QAudioDeviceInfo>
 #include <QIODevice>
@@ -10,13 +32,30 @@
 #include "audiooutput.h"
 
 #ifndef M_PI
+/*!
+ * \brief Representation of pi
+ */
 #define M_PI 3.14159265358979323846
 #endif
 
+/*!
+ * \brief Sample rate of sound card
+ *
+ * In Hertz.
+ */
 #define SAMPLE_RATE 44100
+
+/*!
+ * \brief Buffer size for \ref AudioOutput
+ *
+ * In Bytes.
+ */
 #define BUFFER_SIZE 8196
 
 
+/*!
+ * \brief Sine wave generator source for \ref AudioOutput
+ */
 class SineSource : public QIODevice
 {
 public:
@@ -30,35 +69,68 @@ public:
 
 private:
 	int freq;
-	unsigned char *buffer;  // Sine wave buffer
-	unsigned char *sendpos; // current pos
-	unsigned char *end;     // for faster comparison
-	int samples;         // samples to play for desired sound duration
+	unsigned char *buffer;  //!< \brief Sine wave buffer
+	unsigned char *sendpos; //!< \brief Current pos into the circular \ref buffer
+	unsigned char *end;     //!< \brief Last position in \ref buffer, for faster comparison
+	int samples;            //!< \brief Samples to play for desired sound duration
 };
 
 
-SineSource::SineSource(int _freq, QObject *parent)
+/*!
+ * \brief Sine wave generator source for \ref AudioOutput
+ *
+ * @param freq    desired frequency of sine wave
+ * @param parent  parent QObject, if any
+ *
+ * This class is taylored to be used with \ref AudioOutput, but basically
+ * it's usage pattern looks like this:
+ *
+ * \code
+ *   gen = new SineSource(800, this);
+ *   gen->setDuration(ms);
+ *   while (1) {
+ *        int l = gen->read(buffer, audioOutput->periodSize());
+ *        if (!l) break;
+ *        	output->write(buffer, l)
+ *   }
+ * \endcode
+ */
+SineSource::SineSource(int freq, QObject *parent)
 	: QIODevice(parent)
 	, buffer(0)
 {
-	setFreq(_freq);
+	setFreq(freq);
 	open(QIODevice::ReadOnly);
 }
 
 
+/*!
+ * \brief Class destructor
+ *
+ * Simply get's rid of \ref buffer.
+ */
 SineSource::~SineSource()
 {
 	delete[] buffer;
 }
 
 
-void SineSource::setFreq(int _freq)
+/*!
+ * \brief Change generated frequency
+ *
+ * Calling this method creates a new \ref buffer with 3 full waves of the
+ * desired frequency. After this, you can call \ref setDuration() and than
+ * consume the bytes using \ref readData().
+ *
+ * @param frequency desiged frequency in Hz. Should be below 10000 Hertz.
+ */
+void SineSource::setFreq(int frequency)
 {
-	MYTRACE("SineSource::setFreq(%d)", freq);
+	MYTRACE("SineSource::setFreq(%d)", frequency);
 
 	if (buffer)
 		delete[] buffer;
-	freq = _freq;
+	freq = frequency;
 
 	const int upper_freq = 10000;
 	const int full_waves = 3;
@@ -88,9 +160,19 @@ void SineSource::setFreq(int _freq)
 
 	sendpos = buffer;
 	end = buffer + buflen;
+	samples = 0;
 }
 
 
+/*!
+ * \brief Generate sine for \c ms milliseconds
+ *
+ * This calculates how many \ref samples from \ref buffer are needed for the
+ * specified sound duration duration. Later, \ref readData() won't return
+ * more than this number of samples.
+ *
+ * @param ms   sound duration in milliseconds
+ */
 void SineSource::setDuration(int ms)
 {
 	samples = (SAMPLE_RATE * ms) / 1000;
@@ -98,6 +180,18 @@ void SineSource::setDuration(int ms)
 }
 
 
+/*!
+ * \brief Returns entries from \ref buffer
+ *
+ * Is is a on overwritten method from \c QIODevice which will return the
+ * samples of a sine-wave.
+ *
+ * You need to call \ref setDuration() first
+ *
+ * @param data    destination address
+ * @param maxlen  maximum bytes to copy
+ * @returns       number of bytes copied
+ */
 qint64 SineSource::readData(char *data, qint64 maxlen)
 {
 	MYTRACE("SineSource::readData(data, %lld, samples %d)", maxlen, samples);
@@ -118,6 +212,12 @@ qint64 SineSource::readData(char *data, qint64 maxlen)
 }
 
 
+/*!
+ * \brief Dummy implementation
+ *
+ * This dummy implementation does nothing and is just needed to inherit
+ * successfully from \c QIODevice.
+ */
 qint64 SineSource::writeData(const char *data, qint64 len)
 {
 	Q_UNUSED(data);
@@ -129,6 +229,21 @@ qint64 SineSource::writeData(const char *data, qint64 len)
 
 
 
+/*!
+ * \brief Audio generator for morse code
+ *
+ * This class generates sound for some milliseconds.
+ *
+ * @param parent  QObject parent, if any
+ *
+ * Usage:
+ * \code
+ *   AudioOutput *audio = new AudioOutput(this);
+ *   connect(morse, SIGNAL(playSound(int)), audio, SLOT(playSound(int)) );
+ *   morese->append(...);
+ *   morse->play();
+ * \endcode
+ */
 AudioOutput::AudioOutput(QObject *parent)
 	: QObject(parent)
 	, audioOutput(0)
@@ -165,6 +280,11 @@ AudioOutput::AudioOutput(QObject *parent)
 }
 
 
+/*!
+ * \brief Class destructor
+ *
+ * Destroy's \ref buffer.
+ */
 AudioOutput::~AudioOutput()
 {
 	MYTRACE("AudioOutput::~AudioOutput");
@@ -173,6 +293,12 @@ AudioOutput::~AudioOutput()
 }
 
 
+/*!
+ * \brief Send more data from \ref SineSource to \c QAudioOutput
+ *
+ * This is an interal signal, called via \ref timer. This timer
+ * is called periodically as long as more data should be played.
+ */
 void AudioOutput::writeMore()
 {
 	MYTRACE("AudioOutput::writeMore");
@@ -200,6 +326,11 @@ void AudioOutput::writeMore()
 }
 
 
+/*!
+ * \brief Start sound generation
+ *
+ * @param ms  Desired sound duration in milliseconds.
+ */
 void AudioOutput::playSound(unsigned int ms)
 {
 	MYTRACE("AudioOutput::playSound(%d)", ms);

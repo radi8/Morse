@@ -1,12 +1,52 @@
 #define DEBUGLVL 0
 #include "mydebug.h"
 
+/**
+ * @file
+ * @author Holger Schurig
+ *
+ * @section DESCRIPTION
+ *
+ * Generic class that
+ * -# can translate cleartext into morse
+ * -# can play translated morse
+ *
+ * Oh, err, it doesn't actually play, but instead generate appropriate
+ * signals which other classes can then use to play, display or to control a
+ * rig.
+ *
+ * @section LICENSE
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details at
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+
 #include "morse.h"
 
 #include <QTimer>
 
 
-
+/*!
+ * \brief Class to generate morse code
+ *
+ * Simple usage:
+ * \code
+ *   GenerateMorse *morse = new GenerateMorse(this);
+ *   connect(morse, SIGNAL(playSound(int)), audio, SLOT(playSound(int)) );
+ *   morse->append("73 de");
+ *   morse->append("dh3hs");
+ *   morse->play();
+ * \endcode
+ */
 GenerateMorse::GenerateMorse(QObject *parent)
 	: QObject(parent)
 	, playIdx(0)
@@ -76,12 +116,23 @@ GenerateMorse::GenerateMorse(QObject *parent)
 	store("/",   "-..-.");
 	store("@",   ".--.-.");
 	store("CH",  "----");
-	store("KA",  "-.-.-"); // Spruchanfang
-	store("BT",  "-..-."); // Pause
-	store("AR",  ".-.-."); // Spruchende
-	store("VE",  "...-."); // Verstanden
-	store("SK",  "...-.-"); // Verkehrsende
-	store("HH",  "........"); // Irrung
+	// http://en.wikipedia.org/wiki/Prosigns_for_Morse_code
+	store("AR",  ".-.-.");    // end of message
+	store("AS",  ".-...");    // wait (followed by seconds)
+	store("BK",  "-···-·-");  // Break
+	store("BT",  "-..-.");    // separator within message, written as "="
+	store("CL",  "-·-··-··"); // going "off-the-air"
+	store("CT",  "-·-·-");    // beginning of message, same as KA
+	store("DO",  "-··---");   // shift to japanese wabun code
+	store("KN",  "-·--·");    // invite names station to send
+	store("SK",  "...-.-");   // end of contract
+	store("SN",  "...-.");    // understood
+	store("SO",  "...---..."); // SOS
+	store("VA",  "...-.-");   // same as SK
+	store("VE",  "...-.");    // same as SN
+	store("KA",  "-.-.-");    // same as CT
+	store("TV",  "-..-.");    // same as BT
+	store("HH",  "........"); // Error
 	store(" ",   " ");
 
 	playTimer = new QTimer(this);
@@ -90,6 +141,13 @@ GenerateMorse::GenerateMorse(QObject *parent)
 }
 
 
+/*!
+ * \brief Associate morse-code to cleartext
+ *
+ * @param sign  clear-text morse sign that should be stored, e.g. "n"
+ * @param code  morse-encoding of \c sign using only one of the characters
+ *              from ".- ", e.g. "-."
+ */
 void GenerateMorse::store(const QString &sign, const QString &code)
 {
 	//MYTRACE("GenerateMorse::store('%s', '%s', '%s')",
@@ -113,6 +171,19 @@ const int intraSpacing = -1;
 const int charSpacing = -3;
 const int wordSpacing = -7;
 
+/*!
+ * \brief Add morse code (in string representation) to morse storage
+ *
+ * The string representation will be converted into lengths of dits and
+ * dahs, but also into spacings (intra-character spacing, between character
+ * spacing, word spacing) and then added to \ref morse. The cleartext is also
+ * added to \ref clearText.
+ *
+ * @param dahdits  string representation of morse, e.g. "-."
+ * @param clear    clear-text of the same
+ *
+ * \sa append
+ */
 void GenerateMorse::appendMorse(const QString &dahdits, const QString &clear)
 {
 	MYTRACE("GenerateMorse::appendMorse('%s', '%s')",
@@ -169,6 +240,38 @@ void GenerateMorse::appendMorse(const QString &dahdits, const QString &clear)
 }
 
 
+/*!
+ * \brief Add clear-text to morse storage
+ *
+ * @param str       clear text, e.g. "73 de dh3hs". \a str can be a single
+ *                  character, or it can be a character sequence. In all
+ *                  cases should it be lower-case! \n
+ *                  Use upper-case only to add morse pro-signs. Currently
+ *                  the program understands
+ *                  - AR: Stop (end of message)
+ *                  - AS: Wait (for 10 seconds)
+ *                  - BK: Break
+ *                  - BT: Separator within message
+ *                  - CL: Going off the air
+ *                  - CT: Start (beginning of message)
+ *                  - DO: Shift to japanese wabun code
+ *                  - HH: Error
+ *                  - KA: same as CT
+ *                  - KN: Invitation to a specific named station to transmit
+ *                  - SK: End (end of contact)
+ *                  - SN: Understood
+ *                  - SO: SOS without word spacings
+ *                  - TV: same as BT
+ *                  - VA: sama as SK
+ *                  - VE: same as SN
+ * @param addSpace  optional flag that tells us if a space (as a means to
+ *                  delimit words) should be added. This flag is by default
+ *                  on, you'd want to set it to falls if you characters
+ *                  one-by-one, e.g. when directly feeding typed characters
+ *                  into the class.
+ *
+ * \sa appendMorse
+ */
 void GenerateMorse::append(const QString &str, bool addSpace)
 {
 	MYTRACE("GenerateMorse::append('%s')", qPrintable(str) );
@@ -197,6 +300,12 @@ void GenerateMorse::append(const QString &str, bool addSpace)
 }
 
 
+/*!
+ * \brief Clear the morse storage
+ *
+ * Clears \ref morse, \ref clearText and resets the replay indexes \ref playIdx
+ * and \ref clearIdx.
+ */
 void GenerateMorse::clear()
 {
 	MYTRACE("GenerateMorse::clear");
@@ -242,6 +351,19 @@ int GenerateMorse::totalElements(int from) const
  * Section: playing
  */
 
+/*!
+ * \brief Play morse
+ *
+ * Used to actually play morse. As this class doesn't play anything at all,
+ * it just emits signals, so other class(es) can visualize / audiolize
+ * things.
+ *
+ * Internally \ref playTimer get's started and whenever something has to be
+ * done, one of the signals are emitted. This happens in \ref slotPlayNext().
+ *
+ * \sa stop(), slotPlayNext(), setLoop()
+ */
+
 void GenerateMorse::play()
 {
 	MYTRACE("GenerateMorse::play");
@@ -271,6 +393,11 @@ void GenerateMorse::play()
 }
 
 
+/*!
+ * \brief Stop playing morse
+ *
+ * \sa start()
+ */
 void GenerateMorse::stop()
 {
 	MYTRACE("GenerateMorse::stop");
@@ -279,6 +406,22 @@ void GenerateMorse::stop()
 }
 
 
+/*!
+ * \brief Handle next morse event
+ *
+ * Called from \ref playTimer. \ref playIdx is used to step throught \ref morse
+ * and \ref clearIdx is used to step throught \ref clearText. The contents of
+ * both lists are then used to emit various signals.
+ *
+ * Any class (or classes) receiving those signals can then generate sound
+ * or controll the PTT of your rig and similar things.
+ *
+ * As \ref morse contains times in "elements" units, the actual timing
+ * is controlled by \ref setWpm() and the other \c setXFactor() functions.
+ *
+ * \sa play(), playSound(bool), playSound(unsigned int), hasStopped(),
+ * charChanged() symbolChanged()
+ */
 void GenerateMorse::slotPlayNext()
 {
 	MYTRACE("GenerateMorse::slotPlayNext");
@@ -359,6 +502,15 @@ void GenerateMorse::slotPlayNext()
 }
 
 
+/*!
+ * \brief return current WPM (words per minute) speed
+ *
+ * The returned number is based on the word "paris " and the current
+ * settings of \ref playWpm, \ref ditFactor, \ref dahFactor, \ref intraFactor,
+ * \ref charFactor and \ref wordFactor.
+ *
+ * \sa setWpm
+ */
 float GenerateMorse::getWpm() const
 {
 	MYTRACE("GenerateMorse::getWpm");
@@ -382,7 +534,13 @@ float GenerateMorse::getWpm() const
 }
 
 
-void GenerateMorse::setLoop(bool b)
+/*!
+ * \brief Makes the play() function loop endlessly
+ *
+ * @param loop   boolean if play() should loop endlessly
+ * \sa play()
+ */
+void GenerateMorse::setLoop(bool loop)
 {
 	// First make sure that we have a pause at the end if we're in loop
 	// mode, but no pause if not.
@@ -390,8 +548,92 @@ void GenerateMorse::setLoop(bool b)
 		morse.removeLast();
 	while (!clearText.isEmpty() && clearText.last().isEmpty())
 		clearText.removeLast();
-	if (b)
+	if (loop)
 		append(" ");
 
-	playLoop = b;
+	playLoop = loop;
 }
+
+
+
+/*!
+ * \brief Set replay speed in words per minute
+ *
+ * Setting 5 wpm means that playing "paris " 5 times will take exactly
+ * one minute.
+ *
+ * \note The current implementation won't play the last " " word spacing,
+ * so if you time this function, you'll measure slightly less than one
+ * minute. However, if you \ref setLoop() on, you'll get exactly one minute.
+ *
+ * \sa getWpm()
+ */
+void GenerateMorse::setWpm(float wpm)
+{
+	playWpm = wpm;
+};
+
+
+/*!
+ * \brief Set factor to make dits longer or shorter
+ *
+ * Normally set to 1.0. If you call \ref setWpm() with high speeds, then
+ * dits might no longer become audioble. So you can artificially make
+ * them longer. \ref setDitFactor(2.0) makes them twice as long as normally.
+ *
+ * You can direcly wire this slot to the \c valueChanged() signal of a
+ * \c QDoubleSpinBox.
+ */
+void GenerateMorse::setDitFactor(float factor)
+{
+	ditFactor = factor;
+};
+
+
+/*!
+ * \brief Set factor to make dahs longer or shorter
+ */
+void GenerateMorse::setDahFactor(float factor)
+{
+	dahFactor = factor;
+};
+
+
+/*!
+ * \brief Set factor to make the silence between dits and dahs longer or
+ * shorter
+ *
+ * Here the dits and dahs inside a morse sign are meant. E.g. for the morse
+ * code of the character "n" the duration between the "-" and "." can be
+ * made shorter when calling \ref setIntraFactor(0.8).
+ */
+void GenerateMorse::setIntraFactor(float factor)
+{
+	intraFactor = factor;
+};
+
+
+/*!
+ * \brief Set factor to make the silence between characters longer or
+ * shorter
+ *
+ * This can be used for the Koch/Farnsworth learning method, e.g. you can
+ * have a high \ref setWpm(), but a low \ref setCharFactor().
+ */
+void GenerateMorse::setCharFactor(float factor)
+{
+	charFactor = factor;
+};
+
+
+/*!
+ * \brief Set factor to make the silence between words longer or
+ * shorter
+ *
+ * This can be used for the Koch/Farnsworth learning method, e.g. you can
+ * have a high \ref setWpm(), but a low \ref setCharFactor().
+ */
+void GenerateMorse::setWordFactor(float factor)
+{
+	wordFactor = factor;
+};
