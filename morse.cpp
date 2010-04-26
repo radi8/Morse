@@ -49,6 +49,7 @@
  */
 GenerateMorse::GenerateMorse(QObject *parent)
 	: QObject(parent)
+	, playElement(0)
 	, playIdx(0)
 	, clearIdx(0)
 	, playLoop(false)
@@ -312,8 +313,10 @@ void GenerateMorse::clear()
 
 	morse.clear();
 	clearText.clear();
+	playElement = 0;
 	playIdx = 0;
 	clearIdx = 0;
+	emit currElement(playElement);
 }
 
 
@@ -378,6 +381,8 @@ void GenerateMorse::play()
 			clearText.removeLast();
 	}
 
+	emit maxElements(totalElements());
+
 	// Nothing left?  Bail out!
 	if (morse.isEmpty()) {
 		emit hasStopped();
@@ -387,6 +392,7 @@ void GenerateMorse::play()
 	// One one small silence back, to stop the sound
 	morse.append(intraSpacing);
 
+	playElement = 0;
 	playIdx = 0;
 	clearIdx = 0;
 	playTimer->start(0);
@@ -429,8 +435,10 @@ void GenerateMorse::slotPlayNext()
 	MYVERBOSE("playIdx %d, count %d", playIdx, morse.count());
 	if (playIdx >= morse.count() ) {
 		if (playLoop) {
+			playElement = 0;
 			playIdx = 0;
 			clearIdx = 0;
+			emit currElement(0);
 		} else {
 			emit hasStopped();
 			return;
@@ -439,6 +447,8 @@ void GenerateMorse::slotPlayNext()
 
 	int t = morse[playIdx];
 	MYVERBOSE("playIdx %d, play %d", playIdx, t);
+	playElement += qAbs(t);
+	emit currElement(playElement);
 
 	float factor = 1;
 	switch (t) {

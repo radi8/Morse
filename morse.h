@@ -101,7 +101,23 @@ signals:
 	void charChanged(const QString &);
 	/*! \brief Emitted whenever a new dit or dah get's morsed */
 	void symbolChanged(const QString &);
+	/*! \brief Emits how many duration elements are stored \ref morse.
+	 * Usage:
+	 * \code
+	 *    connect(morse, SIGNAL(maxElements(int), progressBar, SLOT(setMaximum(int)) );
+	 * \endcode
+	 */
+	void maxElements(int);
+	/*! \brief Emits the current position inside \ref morse
+	 * Usage:
+	 * \code
+	 *    connect(morse, SIGNAL(currElement(int), progressBar, SLOT(setValue(int)) );
+	 * \endcode
+	 */
+	void currElement(int);
 private:
+	/*! \brief Element index from \ref morse. \sa maxElements(), currElement() */
+	int playElement;
 	/*! \brief Index into \ref morse */
 	int playIdx;
 	/*! \brief Index into \ref clearText */

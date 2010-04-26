@@ -6,6 +6,8 @@
 #include "scroller.h"
 #include "audiooutput.h"
 
+#include <QTimer>
+
 
 MainWindow::MainWindow()
 {
@@ -26,13 +28,16 @@ MainWindow::MainWindow()
 	connect(morse, SIGNAL(hasStopped()), this, SLOT(morseGeneratorStop()) );
 	morse->append("by dh3hs");
 	//morse->append("paris paris paris paris paris ");
-	morseGeneratorStart();
+	QTimer::singleShot(1, this, SLOT(morseGeneratorStart()) );
 
 	AudioOutput *audio = new AudioOutput(this);
 	connect(morse, SIGNAL(playSound(unsigned int)), audio, SLOT(playSound(unsigned int)) );
 	//connect(morse, SIGNAL(hasStopped()), qApp, SLOT(quit()) );
 
 	connect(morse, SIGNAL(playSound(bool)), scrollWidget, SLOT(setSound(bool)) );
+
+	connect(morse, SIGNAL(maxElements(int)), progressBar, SLOT(setMaximum(int)) );
+	connect(morse, SIGNAL(currElement(int)), progressBar, SLOT(setValue(int)) );
 }
 
 
