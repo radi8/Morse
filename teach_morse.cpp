@@ -121,8 +121,10 @@ void TeachMorse::generateGroups()
 			clearText.append( src.at(qrand() % n) );
 		}
 	}
-	MYDEBUG("  text now '%s'", qPrintable(clearText));
+	MYVERBOSE("  text now '%s'", qPrintable(clearText));
 
+	clearText.prepend("KA ");
+	clearText.append(" AR");
 	emit newText(clearText);
 }
 
