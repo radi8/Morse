@@ -48,6 +48,8 @@ public:
 	int  totalElements(int from=0) const; //!< Total elements in \ref morse.
 public slots:
 	void clear();
+	/*! \brief Set new text */
+	void setText(const QString &s) { clear(); append(s); };
 private:
 	/*!
 	 * \brief Morse storage
