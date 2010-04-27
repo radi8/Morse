@@ -1,5 +1,5 @@
 ?
 .obj
-Makefile
-main
+*/Makefile
+/test_morse/test_morse
 /doc/html

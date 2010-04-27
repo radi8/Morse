@@ -1,5 +1,3 @@
-#DESTDIR     = $$TOPDIR/bin
-DESTDIR     = $$TOPDIR
 UI_DIR      = .obj
 MOC_DIR     = .obj
 RCC_DIR     = .obj

@@ -99,7 +99,7 @@ GenerateMorse::GenerateMorse(QObject *parent)
 	store("8",   "---..");
 	store("9",   "----.");
 	store("0",   "-----");
-	store("*oA", ".--.-");
+	//store("*oA", ".--.-");
 	store("ä",   ".-.-");
 	store("ö",   "---.");
 	store("ü",   "..--");
