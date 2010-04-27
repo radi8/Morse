@@ -395,6 +395,17 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>morseStartButton</tabstop>
+  <tabstop>morseStopButton</tabstop>
+  <tabstop>loopCheckBox</tabstop>
+  <tabstop>wpmSpinBox</tabstop>
+  <tabstop>ditFactorSpinBox</tabstop>
+  <tabstop>dahFactorSpinBox</tabstop>
+  <tabstop>intraFactorSpinBox</tabstop>
+  <tabstop>charFactorSpinBox</tabstop>
+  <tabstop>wordFactorSpinBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>
