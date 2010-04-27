@@ -36,6 +36,8 @@ class GenerateMorse : public QObject {
 
 public:
 	GenerateMorse(QObject *parent=0);
+	/*! Checks if the morse code for \c clearText exists */
+	bool exists(QString clearText) { return codes.contains(clearText); };
 private:
 	void store(const QString &sign, const QString &code);
 	/*! \brief Translation from characters to morse-code */
