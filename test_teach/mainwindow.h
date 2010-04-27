@@ -9,6 +9,7 @@
 
 class TeachMorse;
 class GenerateMorse;
+class AudioOutput;
 
 
 class MainWindow : public QMainWindow, Ui::MainWindow
@@ -19,8 +20,10 @@ public:
 private:
 	TeachMorse *teach;
 	GenerateMorse *morse;
+	AudioOutput *audio;
 private slots:
 	void slotCheck();
+	void slotGenerate();
 };
 
 

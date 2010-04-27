@@ -20,7 +20,7 @@
       <item row="0" column="0">
        <widget class="QLabel" name="label">
         <property name="text">
-         <string>Number of &amp;groups</string>
+         <string>&amp;Number of groups</string>
         </property>
         <property name="buddy">
          <cstring>groupSpinBox</cstring>
@@ -79,7 +79,7 @@
       <item row="2" column="0">
        <widget class="QPushButton" name="generateButton">
         <property name="text">
-         <string>Generate!</string>
+         <string>&amp;Generate!</string>
         </property>
        </widget>
       </item>
@@ -87,6 +87,9 @@
        <widget class="QCheckBox" name="showMorse">
         <property name="text">
          <string>&amp;Show clear-text</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

@@ -4,6 +4,9 @@
 #include "mainwindow.h"
 #include "teach_morse.h"
 #include "morse.h"
+#include "audiooutput.h"
+
+#include <QTimer>
 
 
 MainWindow::MainWindow()
@@ -13,6 +16,13 @@ MainWindow::MainWindow()
 
 	teach = new TeachMorse(this);
 	morse = new GenerateMorse(this);
+	morse->setWpm(20);
+	morse->setDitFactor(1.4);
+	morse->setDahFactor(1.2);
+	morse->setIntraFactor(1.2);
+	morse->setCharFactor(3.0);
+	morse->setWordFactor(2.0);
+	audio = new AudioOutput(this);
 
 	//morseDisplay->setVisible(false);
 	//showMorse->setChecked(false);
@@ -23,8 +33,11 @@ MainWindow::MainWindow()
 	connect(checkButton, SIGNAL(clicked()), SLOT(slotCheck()) );
 	connect(teach, SIGNAL(newText(const QString &)), morseDisplay, SLOT(setPlainText(const QString &)) );
 
-	groupSpinBox->setValue(2);
-	teach->generateGroups();
+	connect(morse, SIGNAL(playSound(unsigned int)), audio, SLOT(playSound(unsigned int)) );
+	connect(generateButton, SIGNAL(clicked()), SLOT(slotGenerate()) );
+	connect(teach, SIGNAL(newText(const QString &)), morse, SLOT(setText(const QString &)) );
+
+	groupSpinBox->setValue(1);
 }
 
 
@@ -51,4 +64,13 @@ void MainWindow::slotCheck()
 
 	teach->checkText(plain);
 	morseEntry->setFocus();
+}
+
+
+void MainWindow::slotGenerate()
+{
+	morseEntry->clear();
+	morseEntry->setFocus();
+
+	QTimer::singleShot(700, morse, SLOT(play()) );
 }

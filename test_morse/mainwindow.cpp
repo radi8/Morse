@@ -15,29 +15,41 @@ MainWindow::MainWindow()
 	setupUi(this);
 
 	morse = new GenerateMorse(this);
-	connect(loopCheckBox, SIGNAL(toggled(bool)), morse, SLOT(setLoop(bool)) );
+	AudioOutput *audio = new AudioOutput(this);
+
+	// from morse
+	connect(morse, SIGNAL(hasStopped()), SLOT(morseGeneratorStop()) );
 	connect(morse, SIGNAL(charChanged(const QString &)),
 	        morseChar, SLOT(setText(const QString &)) );
+	connect(morse, SIGNAL(hasStopped()),
+	        morseChar, SLOT(clear()) );
 	connect(morse, SIGNAL(symbolChanged(const QString &)),
 	        morseSymbol, SLOT(setText(const QString &)) );
-	connect(morse, SIGNAL(hasStopped()), morseChar, SLOT(clear()) );
-	connect(morse, SIGNAL(hasStopped()), morseSymbol, SLOT(clear()) );
-	wpmSpinBox->setValue(10);
+	connect(morse, SIGNAL(hasStopped()),
+	        morseSymbol, SLOT(clear()) );
+	connect(morse, SIGNAL(playSound(bool)),
+	        scrollWidget, SLOT(setSound(bool)) );
+	connect(morse, SIGNAL(maxElements(int)),
+	        progressBar, SLOT(setMaximum(int)) );
+	connect(morse, SIGNAL(currElement(int)),
+	        progressBar, SLOT(setValue(int)) );
+	connect(morse, SIGNAL(playSound(unsigned int)),
+	        audio, SLOT(playSound(unsigned int)) );
+
+	// to morse
+	connect(loopCheckBox, SIGNAL(toggled(bool)), morse, SLOT(setLoop(bool)) );
+
+	wpmSpinBox->setValue(20);
+	ditFactorSpinBox->setValue(1.4);
+	dahFactorSpinBox->setValue(1.2);
+	charFactorSpinBox->setValue(4.0);
+	wordFactorSpinBox->setValue(3.0);
 	updateWpmLabel();
 
-	connect(morse, SIGNAL(hasStopped()), this, SLOT(morseGeneratorStop()) );
 	morse->append("by dh3hs");
 	//morse->append("paris paris paris paris paris ");
-	QTimer::singleShot(1, this, SLOT(morseGeneratorStart()) );
-
-	AudioOutput *audio = new AudioOutput(this);
-	connect(morse, SIGNAL(playSound(unsigned int)), audio, SLOT(playSound(unsigned int)) );
 	//connect(morse, SIGNAL(hasStopped()), qApp, SLOT(quit()) );
-
-	connect(morse, SIGNAL(playSound(bool)), scrollWidget, SLOT(setSound(bool)) );
-
-	connect(morse, SIGNAL(maxElements(int)), progressBar, SLOT(setMaximum(int)) );
-	connect(morse, SIGNAL(currElement(int)), progressBar, SLOT(setValue(int)) );
+	QTimer::singleShot(1, this, SLOT(morseGeneratorStart()) );
 }
 
 
