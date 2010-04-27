@@ -429,6 +429,102 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>wpmSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>wpmChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>251</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>334</x>
+     <y>43</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ditFactorSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>ditFactorChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>301</x>
+     <y>76</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>332</x>
+     <y>76</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>dahFactorSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>dahFactorChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>259</x>
+     <y>102</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>334</x>
+     <y>106</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>intraFactorSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>intraFactorChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>271</x>
+     <y>136</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>332</x>
+     <y>138</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>charFactorSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>charFactorChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>257</x>
+     <y>171</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>333</x>
+     <y>169</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>wordFactorSpinBox</sender>
+   <signal>valueChanged(double)</signal>
+   <receiver>MainWindow</receiver>
+   <slot>wordFactorChanged(double)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>281</x>
+     <y>199</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>334</x>
+     <y>202</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>wpmChanged(double)</slot>
