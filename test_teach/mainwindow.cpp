@@ -63,14 +63,18 @@ void MainWindow::slotCheck()
 	qDebug("entered '%s'", qPrintable(plain));
 
 	teach->checkText(plain);
+	morseDisplay->setVisible(true);
 	morseEntry->setFocus();
 }
 
 
 void MainWindow::slotGenerate()
 {
+	if (!showMorse->isChecked())
+		morseDisplay->setVisible(false);
 	morseEntry->clear();
 	morseEntry->setFocus();
 
 	QTimer::singleShot(700, morse, SLOT(play()) );
+	qDebug(" ");
 }
