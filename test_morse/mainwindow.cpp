@@ -98,6 +98,8 @@ void MainWindow::updateWpmLabel()
 
 void MainWindow::morseGeneratorStart()
 {
+	if (!textEdit->text().isEmpty())
+		morse->setText( textEdit->text() );
 	morse->play();
 	morseStartButton->setEnabled(false);
 	morseStopButton->setEnabled(true);

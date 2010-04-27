@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>335</width>
-    <height>397</height>
+    <height>428</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -294,6 +294,9 @@
      </layout>
     </item>
     <item>
+     <widget class="QLineEdit" name="textEdit"/>
+    </item>
+    <item>
      <spacer name="verticalSpacer">
       <property name="orientation">
        <enum>Qt::Vertical</enum>
@@ -381,7 +384,7 @@
      <x>0</x>
      <y>0</y>
      <width>335</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>
