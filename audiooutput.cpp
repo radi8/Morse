@@ -69,10 +69,10 @@ public:
 
 private:
 	int freq;
-	unsigned char *buffer;  //!< \brief Sine wave buffer
-	unsigned char *sendpos; //!< \brief Current pos into the circular \ref buffer
-	unsigned char *end;     //!< \brief Last position in \ref buffer, for faster comparison
-	int samples;            //!< \brief Samples to play for desired sound duration
+	int *buffer;  //!< \brief Sine wave buffer
+	int *sendpos; //!< \brief Current pos into the circular \ref buffer
+	int *end;     //!< \brief Last position in \ref buffer, for faster comparison
+	int samples;  //!< \brief Samples to play for desired sound duration
 };
 
 
@@ -143,19 +143,16 @@ void SineSource::setFreq(int frequency)
 	// therefore we need room for this many samples:
 	int buflen = SAMPLE_RATE * full_waves / freq;
 
-	// as we store two bytes per value, we need to double that
-	buflen *= 2;
-	MYVERBOSE("calculated buflen: %d", buflen);
+	MYVERBOSE("buf needs to hold %d samples", buflen);
 
-	buffer = new unsigned char[buflen];
+	buffer = new int[buflen];
 
 	// Now fill this buffer with the sine wave
-	unsigned char *t = buffer;
-	for (int i = 0; i < buflen / 2; i++) {
+	int *t = buffer;
+	for (int i = 0; i < buflen; i++) {
 		int value = 32767.0 * sin(M_PI * 2 * i * freq / SAMPLE_RATE);
-		*t++ = value        & 0xff;
-		*t++ = (value >> 8) & 0xff;
-		//MYVERBOSE("%4d: %6d, pos %d", i, value, t - buffer);
+		MYVERBOSE("%4d: %6d, pos %d", i, value, t - buffer);
+		*t++ = value;
 	}
 
 	sendpos = buffer;
@@ -177,6 +174,7 @@ void SineSource::setDuration(int ms)
 {
 	samples = (SAMPLE_RATE * ms) / 1000;
 	samples &= 0x7ffffffe;
+	sendpos = buffer;
 }
 
 
@@ -196,18 +194,27 @@ qint64 SineSource::readData(char *data, qint64 maxlen)
 {
 	MYTRACE("SineSource::readData(data, %lld, samples %d)", maxlen, samples);
 
-	if (maxlen > samples)
-		maxlen = samples;
-	if (!maxlen)
-		return 0;
-
 	quint64 len = maxlen;
-	while (len--) {
-		*data++ = *sendpos++;
-		if (sendpos == end)
-			sendpos = buffer;
+
+	char *t = data;
+	while (len) {
+		// As long as we should provide samples, do this:
+		if (samples) {
+			int value = *sendpos++;
+			//TODO: this is the place where we could modify the
+			//value, e.g. to ramp it up or down, or to attenuate it
+			if (sendpos == end)
+				sendpos = buffer;
+			*t++ = value        & 0xff;
+			*t++ = (value >> 8) & 0xff;
+			samples--;
+		} else {
+			// But afterwards, return zero
+			*t++ = 0;
+			*t++ = 0;
+		}
+		len -= 2;
 	}
-	samples -= maxlen;
 	return maxlen;
 }
 
@@ -309,20 +316,17 @@ void AudioOutput::writeMore()
 	if (audioOutput->state() == QAudio::StoppedState)
 		return;
 
+	// If we would write this into a file, we could convert it to a WAV
+	// file with this command:
+	//       sox -r 44100 -e signed -b 16 -c 1 a.raw a.wav
 	int chunks = audioOutput->bytesFree() / audioOutput->periodSize();
 	while (chunks) {
 		int l = gen->read(buffer, audioOutput->periodSize());
-		if (l == 0) {
-			audioOutput->suspend();
-			return;
-		}
 		if (l > 0)
-			output->write(buffer,l);
-		if (l != audioOutput->periodSize())
-			break;
+			output->write(buffer, l);
 		chunks--;
 	}
-	timer->start(20);
+	timer->start(30);
 }
 
 
