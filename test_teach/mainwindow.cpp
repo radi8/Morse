@@ -24,8 +24,8 @@ MainWindow::MainWindow()
 	morse->setWordFactor(2.0);
 	audio = new AudioOutput(this);
 
-	//morseDisplay->setVisible(false);
-	//showMorse->setChecked(false);
+	morseDisplay->setVisible(false);
+	showMorse->setChecked(false);
 	connect(showMorse, SIGNAL(toggled(bool)), morseDisplay, SLOT(setVisible(bool)) );
 
 	connect(groupSpinBox, SIGNAL(valueChanged(int)), teach, SLOT(setGroups(int)) );
@@ -35,7 +35,10 @@ MainWindow::MainWindow()
 
 	connect(morse, SIGNAL(playSound(unsigned int)), audio, SLOT(playSound(unsigned int)) );
 	connect(generateButton, SIGNAL(clicked()), SLOT(slotGenerate()) );
+	connect(generateButton, SIGNAL(clicked()), resultLabel, SLOT(clear()) );
 	connect(teach, SIGNAL(newText(const QString &)), morse, SLOT(setText(const QString &)) );
+
+	connect(teach, SIGNAL(checkResults(int, int)), SLOT(slotResults(int, int)) );
 
 	groupSpinBox->setValue(1);
 }
@@ -52,15 +55,11 @@ void MainWindow::slotCheck()
 			c = entry.mid(i,2);
 			i++;
 		}
-#if 0
-		if (c == "\n")
-			c = ".";
-#endif
 		if (morse->exists(c))
 			plain.append(c);
 	}
 
-	qDebug("entered '%s'", qPrintable(plain));
+	MYDEBUG("entered '%s'", qPrintable(plain));
 
 	teach->checkText(plain);
 	morseDisplay->setVisible(true);
@@ -76,5 +75,11 @@ void MainWindow::slotGenerate()
 	morseEntry->setFocus();
 
 	QTimer::singleShot(700, morse, SLOT(play()) );
-	qDebug(" ");
+	MYDEBUG(" ");
+}
+
+
+void MainWindow::slotResults(int right, int wrong)
+{
+	resultLabel->setText(QString("%1/%2").arg(right).arg(right+wrong));
 }

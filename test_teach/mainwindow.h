@@ -24,6 +24,7 @@ private:
 private slots:
 	void slotCheck();
 	void slotGenerate();
+	void slotResults(int right, int wrong);
 };
 
 

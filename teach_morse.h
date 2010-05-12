@@ -25,6 +25,7 @@ public slots:
 	void checkText(const QString &text);
 signals:
 	void newText(const QString &);
+	void checkResults(int right, int wrong);
 private:
 	bool enabled[256];
 	bool lastWrong[256];

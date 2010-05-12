@@ -1,4 +1,4 @@
-#define DEBUGLVL 1
+#define DEBUGLVL 0
 #include "mydebug.h"
 
 #include "teach_morse.h"
@@ -144,6 +144,8 @@ void TeachMorse::checkText(const QString &text)
 
 	diff_match_patch dmp;
 	QList<Diff> dl = dmp.diff_main(clearText, text);
+	int totalRight = 0;
+	int totalWrong = 0;
 	foreach(Diff d, dl) {
 		switch (d.operation) {
 		case INSERT: {
@@ -160,6 +162,7 @@ void TeachMorse::checkText(const QString &text)
 				if (enabled[c]) {
 					MYDEBUG("mark %c as bad", c);
 					wrong[c]++;
+					totalWrong++;
 					lastWrong[c] = true;
 				}
 			}
@@ -173,11 +176,13 @@ void TeachMorse::checkText(const QString &text)
 				if (enabled[c]) {
 					MYDEBUG("mark %c as good", c);
 					right[c]++;
+					totalRight++;
 				}
 			}
 			break;
 		}
 	}
+	emit checkResults(totalRight, totalWrong);
 
 	//qDebug("delta: '%s'", qPrintable( dmp.diff_toDelta(dl)));
 }
