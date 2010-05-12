@@ -81,5 +81,11 @@ void MainWindow::slotGenerate()
 
 void MainWindow::slotResults(int right, int wrong)
 {
-	resultLabel->setText(QString("%1/%2").arg(right).arg(right+wrong));
+	int total = right + wrong;
+	if (total)
+		resultLabel->setText(QString("%1/%2 %3%")
+		                     .arg(right)
+		                     .arg(total)
+		                     .arg(right*100/total)
+		                     );
 }
