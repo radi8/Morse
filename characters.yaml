@@ -1,0 +1,106 @@
+MorseCharacter:
+  container:
+    name: chars
+    type: QList
+  model:
+    name: CharacterModel
+    type: QAbstractTableModel
+  view:
+    name: CharacterView
+    type: QTableView
+  fields:
+    - {
+    name: number,
+    type: quint32,
+    head: "Number",
+    readonly: true,
+    }
+
+    - {
+    name: sign,
+    type: QString,
+    head: "Number",
+    }
+
+    - {
+    name: code,
+    type: QString,
+    head: "Morse",
+    sort_code: sortMorse,
+    }
+
+    - {
+    name: enabled,
+    type: bool,
+    head: "Enabled",
+    table_type: checkbox,
+    order: descending,
+    }
+
+    - {
+    name: right,
+    type: quint32,
+    head: "Right",
+    }
+
+    - {
+    name: wrong,
+    type: quint32,
+    head: "Wrong",
+    }
+
+    - {
+    name: lastWrong,
+    type: bool
+    }
+
+    - {
+    name: percent,
+    head: "Error Rate",
+    data_code: headPercent,
+    readonly: true,
+    sort_code: sortPercent,
+    }
+  code:
+    headPercent: |
+      int total = chars[row].right + chars[row].wrong;
+      if (total)
+          return QString("%1 %").arg(chars[row].wrong*100/total);
+      else
+          return QString("100 %");
+    sortPercent: |
+      int t1 = one.right + one.wrong;
+      int t2 = two.right + two.wrong;
+      int s1 = 100;
+      int s2 = 100;
+      if (t1)
+          s1 = one.wrong*100/t1;
+      if (t2)
+          s2 = two.wrong*100/t2;
+
+    sortMorse: |
+      QString s1;
+      foreach(QChar c, one.code) {
+          if (c == '.')
+              s1.append("b");
+          else
+          if (c == '-')
+              s1.append("c");
+          else
+          if (c == ' ')
+              s1.append("x");
+      }
+      while (s1.count() < 10)
+          s1.append("a");
+      QString s2;
+      foreach(QChar c, two.code) {
+          if (c == '.')
+              s2.append("b");
+          else
+          if (c == '-')
+              s2.append("c");
+          if (c == ' ')
+              s2.append("x");
+      }
+      while (s2.count() < 10)
+          s2.append("a");
