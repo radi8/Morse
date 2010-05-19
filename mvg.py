@@ -189,9 +189,12 @@ def generateModelData(model, fields, cont, code):
     c_model.append("\tif (role == Qt::DisplayRole) {")
     c_model.append("\t\tswitch (index.column()) {")
     col_checkbox = False
+    col_align = False
     for field in fields:
         if not field.has_key("head"):
             continue
+        if field.has_key("halign") or field.has_key("valign"):
+            col_align = True
         if get(field, "table_type") == "checkbox":
             col_checkbox = True
             continue
@@ -219,6 +222,19 @@ def generateModelData(model, fields, cont, code):
             c_model.append("\t\t\tbool checked = %s[row].%s;" % (cont["name"], field["name"]))
             c_model.append("\t\t\treturn checked ? Qt::Checked : Qt::Unchecked;")
             c_model.append("\t\t\t}")
+        c_model.append("\t\t}")
+    if col_align:
+        c_model.append("\t} else")
+        c_model.append("\tif (role == Qt::TextAlignmentRole) {")
+        c_model.append("\t\tswitch (index.column()) {")
+        for field in fields:
+            halign = get(field, "halign", "left").capitalize()
+            valign = get(field, "valign", "vcenter").capitalize()
+            if halign == "Left" and valign == "Vcenter":
+                continue
+            if valign == "Vcenter": valign = "VCenter"
+            c_model.append("\t\tcase %s_%s:" % (col_prefix, field["name"].upper()) )
+            c_model.append("\t\t\treturn (int)(Qt::Align%s | Qt::Align%s);" % (halign.capitalize(), valign))
         c_model.append("\t\t}")
     c_model.append("\t}")
     c_model.append("")

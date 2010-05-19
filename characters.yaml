@@ -44,12 +44,14 @@ MorseCharacter:
     name: right,
     type: quint32,
     head: "Right",
+    halign: right,
     }
 
     - {
     name: wrong,
     type: quint32,
     head: "Wrong",
+    halign: right,
     }
 
     - {
@@ -63,6 +65,7 @@ MorseCharacter:
     data_code: headPercent,
     readonly: true,
     sort_code: sortPercent,
+    halign: right,
     }
   code:
     headPercent: |
