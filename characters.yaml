@@ -5,9 +5,12 @@ MorseCharacter:
   model:
     name: CharacterModel
     type: QAbstractTableModel
+    #sort: false
+    #edit_table: false
   view:
     name: CharacterView
     type: QTableView
+    #sort: false
   fields:
     - {
     name: number,

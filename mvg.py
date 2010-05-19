@@ -23,6 +23,7 @@ import sys, yaml, os
 col_count = 0
 col_prefix = ""
 c_col = []
+has_sort = False
 
 h_include = []
 h_struct = []
@@ -231,7 +232,6 @@ def generateModelSort(name, model, cont, fields, code):
     ('sort_code') or a different default sort order ('sort_order)."""
 
     global h_model
-    # TODO: if sort:
     h_model.append("")
     h_model.append("\t// Sort support:")
     h_model.append("\tvirtual void sort(int column, Qt::SortOrder order=Qt::AscendingOrder);")
@@ -289,7 +289,6 @@ def generateModelEdit(model, fields, cont):
     """This calls generators for all functions that are needed for in-place edit."""
 
     global h_model
-    # TODO: if edit:
     h_model.append("")
     h_model.append("\t// Edit support:")
     h_model.append("\tvoid store(const QString &sign, const QString &code);")
@@ -409,8 +408,12 @@ def generateModel(name, model, cont, fields, code):
     generateModelColumnCount(model)
     generateModelHeaderData(model, fields)
     generateModelData(model, fields, cont, code)
-    generateModelSort(name, model, cont, fields, code)
-    generateModelEdit(model, fields, cont)
+    if get(model, "sort", True):
+        global has_sort
+        has_sort = True
+        generateModelSort(name, model, cont, fields, code)
+    if get(model, "edit_table", True):
+        generateModelEdit(model, fields, cont)
     # TODO: members
     h_model.append("};\n\n")
     c_model.append("")
@@ -443,11 +446,11 @@ def generateView(view):
     c_view.append("\tsetHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);")
     c_view.append("\tsetVerticalScrollMode(QAbstractItemView::ScrollPerPixel);")
     c_view.append("")
-    # TODO: if sort...
-    c_view.append("\tconnect(horizontalHeader(), SIGNAL(sortIndicatorChanged(int, Qt::SortOrder)),")
-    c_view.append("\t        SLOT(sortByColumn(int)) );")
-    c_view.append("\tsetSortingEnabled(true);")
-    c_view.append("\tsortByColumn(0, Qt::AscendingOrder);")
+    if get(view, "sort", True):
+        c_view.append("\tconnect(horizontalHeader(), SIGNAL(sortIndicatorChanged(int, Qt::SortOrder)),")
+        c_view.append("\t        SLOT(sortByColumn(int)) );")
+        c_view.append("\tsetSortingEnabled(true);")
+        c_view.append("\tsortByColumn(0, Qt::AscendingOrder);")
     c_view.append("}\n")
 
 
@@ -518,7 +521,7 @@ if options.impl or options.both:
     f.write("// automatically generated from %s\n\n" % args[0])
     f.write("\n".join(c_container))
     f.write("\n".join(c_col))
-    # TODO: if sort
-    f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n\n")
+    if has_sort:
+        f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n\n")
     f.write("\n".join(c_model))
     f.write("\n".join(c_view))
