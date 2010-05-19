@@ -473,10 +473,6 @@ def generateView(name, view, model, dia):
     h_view.append("public:")
     h_view.append("	%s(QWidget *parent=0);" % view["name"])
     # TODO: members
-    if dia:
-        h_view.append("public slots:")
-        h_view.append("	void slotEdit(const QModelIndex &index);")
-    h_view.append("};\n")
 
     global c_view
     c_view.append("%s::%s(QWidget *parent)" % (view["name"],view["name"]))
@@ -501,20 +497,58 @@ def generateView(name, view, model, dia):
             c_view.append("\tconnect(this, SIGNAL(doubleClicked(const QModelIndex &)), SLOT(slotEdit(const QModelIndex &)) );")
     c_view.append("}\n")
 
+    if get(view, "delete") or get(view, "insert"):
+        generateViewInsertDelete(name, view, model)
     if dia:
-        c_view.append("void %s::slotEdit(const QModelIndex &index)" % view["name"])
-        c_view.append("{")
-       	c_view.append("\tint row = index.row();")
-        c_view.append("\tstruct %s m = chars[row];" % name)
-        c_view.append("\tQDialog *dia = new %s(&m, this);" % dia["name"])
-        c_view.append("\tif (dia->exec() == QDialog::Accepted) {")
-        c_view.append("\t\tchars[row] = m;")
-        c_view.append("\t\tQModelIndex left = model()->index(row, 0);")
-        c_view.append("\t\tQModelIndex right = model()->index(row, COL_%s_LAST);" % model["name"].upper())
-        c_view.append("\t\tdataChanged(left, right);")
-        c_view.append("\t}")
+        generateViewSlotEdit(name, view, model, dia)
 
-        c_view.append("}\n")
+    h_view.append("};\n")
+
+
+
+def generateViewSlotEdit(name, view, model, dia):
+    """Adds code to handle the call of the editor dialog due after a
+    double-click."""
+
+    global h_view
+    h_view.append("public slots:")
+    h_view.append("\tvoid slotEdit(const QModelIndex &index);")
+
+    global c_view
+    c_view.append("void %s::slotEdit(const QModelIndex &index)" % view["name"])
+    c_view.append("{")
+    c_view.append("\tint row = index.row();")
+    c_view.append("\tstruct %s m = chars[row];" % name)
+    c_view.append("\tQDialog *dia = new %s(&m, this);" % dia["name"])
+    c_view.append("\tif (dia->exec() == QDialog::Accepted) {")
+    c_view.append("\t\tchars[row] = m;")
+    c_view.append("\t\tQModelIndex left = model()->index(row, 0);")
+    c_view.append("\t\tQModelIndex right = model()->index(row, COL_%s_LAST);" % model["name"].upper())
+    c_view.append("\t\tdataChanged(left, right);")
+    c_view.append("\t}")
+    c_view.append("}\n")
+
+def generateViewInsertDelete(name, view, model):
+    global c_include
+    addInclude(c_include, "QKeyEvent")
+
+    global h_view
+    h_view.append("public slots:")
+    h_view.append("\tvirtual void keyPressEvent(QKeyEvent *event);")
+
+    global c_view
+    c_view.append("void %s::keyPressEvent(QKeyEvent *event)" % view["name"])
+    c_view.append("{")
+    c_view.append("\tswitch (event->key()) {")
+    if get(view, "insert"):
+        c_view.append("\tcase Qt::Key_Insert:")
+        c_view.append("\t\treturn;")
+    if get(view, "delete"):
+        c_view.append("\tcase Qt::Key_Delete:")
+        c_view.append("\t\treturn;")
+    c_view.append("}");
+    c_view.append("\tQAbstractItemView::keyPressEvent(event);")
+    c_view.append("}")
 
 
 def editorForTyp(typ):
@@ -666,6 +700,7 @@ for name in data:
         generateDialog(name, item["dialog"], item["fields"])
 h_include.append("\n")
 if h_classes: h_classes.append("\n")
+if h_view: h_view.append("")
 
 #print "\n".join(h_include)
 #print "\n".join(h_classes)

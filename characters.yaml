@@ -19,6 +19,8 @@ MorseCharacter:
     type: QTableView
     # This would disable the automatically generated sort code of the view:
     #sort: false
+    delete: true
+    insert: true
   dialog:
     # The existence of this "dialog" entry enables editing inside a form
     # after a double-click.
