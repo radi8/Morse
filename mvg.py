@@ -222,7 +222,7 @@ def generateModelSort(name, model, cont, fields, code):
                 model["name"], field["name"].capitalize(),
                 name, name))
         c_model.append("{")
-        order = get(field, "order", "ascending")
+        order = get(field, "sort_order", "ascending")
         if order == "ascending":
             order = "Qt::AscendingOrder"
         elif order == "descending":

@@ -34,7 +34,7 @@ MorseCharacter:
     type: bool,
     head: "Enabled",
     table_type: checkbox,
-    order: descending,
+    sort_order: descending,
     }
 
     - {
