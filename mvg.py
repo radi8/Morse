@@ -26,6 +26,8 @@ c_col = []
 has_sort = False
 
 h_include = []
+h_classes = []
+c_include = []
 h_struct = []
 h_container = []
 c_container = []
@@ -33,9 +35,12 @@ h_model = []
 c_model = []
 h_view = []
 c_view = []
-
+h_dialog = []
+c_dialog = []
 
 def get(dict, var, default=None):
+    """Returns @dict[@var]" if it exists, otherwise returns the default."""
+
     if dict.has_key(var):
         return dict[var]
     else:
@@ -43,11 +48,32 @@ def get(dict, var, default=None):
 
 
 def appendCode(dest, indent, text):
+    """Adds a pice of source code from @text into @dest. The code
+    get's formatted somewhat, e.g. @indent is added before each
+    line."""
+
     dest.append("%s// START custom code" % indent)
     for s in text.rstrip().split("\n"):
         dest.append("%s%s" % (indent, s))
     dest.append("%s// END custom code" % indent)
 
+
+def addInclude(arr, header):
+    """Adds an '#include <>' line to @arr, but only if it doesn't yet
+    exist there."""
+
+    header = "#include <%s>" % header
+    if not header in arr:
+        arr.append(header)
+
+def addClassRef(clazz):
+    """Adds an 'class @clazz;' line to h_classes, but only if it
+    doesn't yet exist there."""
+
+    global h_classes
+    header = "class %s;" % clazz
+    if not header in h_classes:
+        h_classes.append(header)
 
 def generateStruct(name, cont, fields):
     "Creates the struct that contains the data fields"
@@ -67,7 +93,7 @@ def generateContainer(name, cont):
     "Creates the container (usually QLIst) that contains the structs."
 
     global h_include
-    h_include.append("#include <%s>" % cont["type"] )
+    addInclude(h_include, cont["type"])
     global h_container
     h_container.append("extern %s<%s> %s;\n\n" % ( cont["type"], name, cont["name"]) )
     global c_container
@@ -410,7 +436,7 @@ def generateModel(name, model, cont, fields, code):
     if not model["type"] in ("QAbstractTableModel",):
         raise "cannot handle model type %s" % model["type"]
     global h_include
-    h_include.append("#include <%s>" % model["type"] )
+    addInclude(h_include, model["type"])
 
     global h_model
     h_model.append("class %s : public %s" % (model["name"], model["type"]) )
@@ -435,11 +461,11 @@ def generateModel(name, model, cont, fields, code):
     c_model.append("")
 
 
-def generateView(view):
+def generateView(name, view, model, dia):
     """This creates a simple view."""
 
     global h_include
-    h_include.append("#include <%s>" % view["type"])
+    addInclude(h_include, view["type"])
     global h_view
     h_view.append("class %s : public %s" % (view["name"], view["type"]))
     h_view.append("{")
@@ -447,6 +473,9 @@ def generateView(view):
     h_view.append("public:")
     h_view.append("	%s(QWidget *parent=0);" % view["name"])
     # TODO: members
+    if dia:
+        h_view.append("public slots:")
+        h_view.append("	void slotEdit(const QModelIndex &index);")
     h_view.append("};\n")
 
     global c_view
@@ -467,7 +496,129 @@ def generateView(view):
         c_view.append("\t        SLOT(sortByColumn(int)) );")
         c_view.append("\tsetSortingEnabled(true);")
         c_view.append("\tsortByColumn(0, Qt::AscendingOrder);")
+        c_view.append("\tsetEditTriggers(QAbstractItemView::AnyKeyPressed | QAbstractItemView::EditKeyPressed);")
+        if dia:
+            c_view.append("\tconnect(this, SIGNAL(doubleClicked(const QModelIndex &)), SLOT(slotEdit(const QModelIndex &)) );")
     c_view.append("}\n")
+
+    if dia:
+        c_view.append("void %s::slotEdit(const QModelIndex &index)" % view["name"])
+        c_view.append("{")
+       	c_view.append("\tint row = index.row();")
+        c_view.append("\tstruct %s m = chars[row];" % name)
+        c_view.append("\tQDialog *dia = new %s(&m, this);" % dia["name"])
+        c_view.append("\tif (dia->exec() == QDialog::Accepted) {")
+        c_view.append("\t\tchars[row] = m;")
+        c_view.append("\t\tQModelIndex left = model()->index(row, 0);")
+        c_view.append("\t\tQModelIndex right = model()->index(row, COL_%s_LAST);" % model["name"].upper())
+        c_view.append("\t\tdataChanged(left, right);")
+        c_view.append("\t}")
+
+        c_view.append("}\n")
+
+
+def editorForTyp(typ):
+    """Given a Qt base type, returns a usable edit QWidget, and the
+    names of the setter and getter functions."""
+
+    if typ == "quint32":
+        return ("QSpinBox", "setValue", "value")
+    elif typ == "QString":
+        return ("QLineEdit", "setText", "text")
+    elif typ == "bool":
+        return ("QCheckBox", "setChecked", "isChecked")
+    return (None, None, None)
+
+
+def generateDialog(name, dia, fields):
+    """This hefty generator function generates a QDialog-derived class
+    to out-of-table editing of data records."""
+
+    global c_include
+
+    title = get(dia, "head")
+    if title:
+        title = "tr(\"%s\")" % title
+    else:
+        title = "QString::null"
+
+    global h_dialog;
+    addInclude(h_include, "QDialog")
+    h_dialog.append("class %s : public QDialog" % dia["name"])
+    h_dialog.append("{")
+    h_dialog.append("\tQ_OBJECT")
+    h_dialog.append("public:")
+    h_dialog.append("\t%s(%s *record, QWidget *parent=0, Qt::WindowFlags f=0);" % (dia["name"], name))
+    h_dialog.append("\tvirtual void accept();")
+    h_dialog.append("")
+    h_dialog.append("\t%s *m;" % name)
+
+    global c_dialog
+    c_dialog.append("%s::%s(%s *record, QWidget *parent, Qt::WindowFlags f)"
+                    % (dia["name"], dia["name"], name))
+    c_dialog.append("\t: QDialog(parent, f)")
+    c_dialog.append("\t, m(record)")
+    c_dialog.append("{")
+    c_dialog.append("\tsetWindowTitle(%s);" % title)
+    c_dialog.append("")
+
+    c_layout = []
+    c_get    = []
+    c_set    = []
+    for field in fields:
+        if not (field.has_key("type") and field.has_key("name") and field.has_key("head")):
+            continue
+        if get(field, "readonly"):
+            continue
+        name = "edit%s" % field["name"].capitalize()
+        typ = get(field, "dia_type", field["type"])
+        (typ, setter, getter) = editorForTyp(typ)
+        if typ == "":
+            print "Unknown type '%s' for dialog" % field["type"]
+            continue
+        if typ[0] == "Q":
+            addInclude(c_include, typ)
+            addClassRef(typ)
+        # TODO: allow include of local header?
+        h_dialog.append("\t%s *%s;" % (typ, name) )
+
+        c_dialog.append("\t%s = new %s(this);" % (name, typ))
+        c_set.append("\t%s->%s(m->%s);" % (name, setter, field["name"]))
+        label = get(field, "dia_label", get(field, "head"))
+        if label:
+            label = "tr(\"%s\"), " % label
+        c_layout.append("\tformLayout->addRow(%s%s);" % (label, name))
+
+        c_get.append("\tm->%s = %s->%s();" % (field["name"], name, getter))
+
+    h_dialog.append("\tQDialogButtonBox *okCancel;");
+    h_dialog.append("};\n")
+
+    addInclude(c_include, "QFormLayout")
+    c_dialog.append("")
+    c_dialog.append("\tQFormLayout *formLayout = new QFormLayout;")
+    c_dialog.extend(c_layout)
+    c_dialog.append("")
+    c_dialog.extend(c_set)
+    c_dialog.append("")
+
+    addClassRef("QDialogButtonBox")
+    addInclude(c_include, "QDialogButtonBox")
+    c_dialog.append("\tokCancel = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, this);")
+    c_dialog.append("\tconnect(okCancel, SIGNAL(accepted()), this, SLOT(accept()));")
+    c_dialog.append("\tconnect(okCancel, SIGNAL(rejected()), this, SLOT(reject()));")
+    c_dialog.append("")
+    c_dialog.append("\tQVBoxLayout *mainLayout = new QVBoxLayout(this);")
+    c_dialog.append("\tmainLayout->addLayout(formLayout);")
+    c_dialog.append("\tmainLayout->addWidget(okCancel);")
+    c_dialog.append("\tsetLayout(mainLayout);")
+    c_dialog.append("}\n")
+
+    c_dialog.append("void CharacterDialog::accept()")
+    c_dialog.append("{")
+    c_dialog.extend(c_get)
+    c_dialog.append("\tQDialog::accept();")
+    c_dialog.append("}\n")
 
 
 
@@ -510,9 +661,18 @@ for name in data:
     if item.has_key("model"):
         generateModel(name, item["model"], item["container"], item["fields"], item["code"])
     if item.has_key("view"):
-        generateView(item["view"])
+        generateView(name, item["view"], item["model"], get(item, "dialog"))
+    if item.has_key("dialog"):
+        generateDialog(name, item["dialog"], item["fields"])
 h_include.append("\n")
+if h_classes: h_classes.append("\n")
 
+#print "\n".join(h_include)
+#print "\n".join(h_classes)
+#print "\n".join(h_dialog)
+#print "\n".join(c_include)
+#print "\n".join(c_dialog)
+#sys.exit(1)
 
 #
 # Now write this into the two files
@@ -524,20 +684,26 @@ if options.decl or options.both:
     f.write("#define %s_H\n\n" % basename.upper())
     f.write("// automatically generated from %s\n\n" % args[0])
     f.write("\n".join(h_include))
+    f.write("\n".join(h_classes))
     f.write("\n".join(h_struct))
     f.write("\n".join(h_container))
     f.write("\n".join(h_model))
     f.write("\n".join(h_view))
+    f.write("\n".join(h_dialog))
     f.write("\n#endif\n")
 
 if options.impl or options.both:
     f = open("%s/%s.cpp" % (options.destdir, basename), "w")
     f.write("#include \"%s.h\"\n" % basename)
-    f.write("#include <QHeaderView>\n\n")
-    f.write("// automatically generated from %s\n\n" % args[0])
+    addInclude(c_include, "QHeaderView")
+    f.write("\n".join(c_include))
+    f.write("\n// automatically generated from %s\n\n" % args[0])
     f.write("\n".join(c_container))
     f.write("\n".join(c_col))
     if has_sort:
         f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n\n")
     f.write("\n".join(c_model))
     f.write("\n".join(c_view))
+    if c_dialog:
+        f.write("\n\n")
+        f.write("\n".join(c_dialog))

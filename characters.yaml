@@ -11,6 +11,9 @@ MorseCharacter:
     name: CharacterView
     type: QTableView
     #sort: false
+  dialog:
+    name: CharacterDialog
+    head: "Morse Character"
   fields:
     - {
     name: number,
