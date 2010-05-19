@@ -1,9 +1,12 @@
+isEmpty(TOPDIR):TOPDIR = .
+
+INCLUDEPATH *= $$TOPDIR
+
 UI_DIR      = .obj
 MOC_DIR     = .obj
 RCC_DIR     = .obj
 OBJECTS_DIR = .obj
-
-INCLUDEPATH *= $$TOPDIR
+MVG_DIR     = .obj
 
 CONFIG -= release
 CONFIG *= debug
@@ -14,3 +17,4 @@ TARGET  =  main
 
 QMAKE_CLEAN *= $$DESTDIR/$$TARGET
 
+include($$TOPDIR/mvg.pri)

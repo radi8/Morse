@@ -418,14 +418,18 @@ def generateView(view):
 
 from optparse import OptionParser
 parser = OptionParser()
-parser.add_option("-o", "--output", dest="dest",
-	help="write output to FILE", metavar="FILE")
+parser.add_option("-d", "--dir", dest="destdir", default=".",
+	help="destination directory", metavar="DIR")
+parser.add_option("--decl",
+                  action="store_true", dest="decl", default=False,
+                  help="generate declaration (*.h)")
 parser.add_option("--impl",
                   action="store_true", dest="impl", default=False,
                   help="generate implementation (*.cpp)")
 (options, args) = parser.parse_args()
+options.both = not options.decl and not options.impl
 
-if len(args) != 1 or not options.dest:
+if len(args) != 1:
     print "Usage: %s -o <output> <filename>.yaml" % sys.argv[0]
 
 basename = os.path.splitext(os.path.basename(args[0]))[0]
@@ -445,18 +449,8 @@ for name in data:
         generateView(item["view"])
 h_include.append("\n")
 
-if options.impl:
-    f = open(options.dest, "w")
-    f.write("#include \"%s.h\"\n" % basename)
-    f.write("#include <QHeaderView>\n\n")
-    f.write("\n".join(c_container))
-    f.write("\n".join(c_col))
-    # TODO: if sort
-    f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n\n")
-    f.write("\n".join(c_model))
-    f.write("\n".join(c_view))
-else:
-    f = open(options.dest, "w")
+if options.decl or options.both:
+    f = open("%s/%s.h" % (options.destdir, basename), "w")
     f.write("#ifndef %s_H\n" % basename.upper())
     f.write("#define %s_H\n\n" % basename.upper())
     f.write("\n".join(h_include))
@@ -465,6 +459,16 @@ else:
     f.write("\n".join(h_model))
     f.write("\n".join(h_view))
     f.write("\n#endif\n")
+if options.impl or options.both:
+    f = open("%s/%s.cpp" % (options.destdir, basename), "w")
+    f.write("#include \"%s.h\"\n" % basename)
+    f.write("#include <QHeaderView>\n\n")
+    f.write("\n".join(c_container))
+    f.write("\n".join(c_col))
+    # TODO: if sort
+    f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n\n")
+    f.write("\n".join(c_model))
+    f.write("\n".join(c_view))
 
 #print "\n".join(h_include)
 #print "\n".join(h_struct)
