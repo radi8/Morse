@@ -49,6 +49,8 @@ def appendCode(dest, indent, text):
 
 
 def generateStruct(name, cont, fields):
+    "Creates the struct that contains the data fields"
+
     global h_struct
     h_struct.append("class %s {" % name)
     h_struct.append("public:")
@@ -61,8 +63,8 @@ def generateStruct(name, cont, fields):
 
 
 def generateContainer(name, cont):
-    if not cont["type"] in ("QList",):
-        raise "cannot handle container type %s" % cont["type"]
+    "Creates the container (usually QLIst) that contains the structs."
+
     global h_include
     h_include.append("#include <%s>" % cont["type"] )
     global h_container
@@ -72,6 +74,9 @@ def generateContainer(name, cont):
 
 
 def generateColumnConsts(model, fields):
+    """Generates "const int COL_xxx = n;" constants for easier
+    referencing to the columns."""
+
     global c_col
     global col_prefix
     global col_count
@@ -90,6 +95,8 @@ def generateColumnConsts(model, fields):
 
 
 def generateModelContructor(model, code):
+    "Creates the (boring) constructor of the model."
+
     global h_model
     h_model.append("\t%s(QObject *parent=0);" % model["name"])
     h_model.append("")
@@ -105,6 +112,9 @@ def generateModelContructor(model, code):
 
 
 def generateModelRowCount(model, cont):
+    """Creates an interface function that simply returns number of
+    elements in the container."""
+
     global h_model
     h_model.append("\tint rowCount(const QModelIndex &parent = QModelIndex()) const;")
     global c_model
@@ -116,6 +126,9 @@ def generateModelRowCount(model, cont):
 
 
 def generateModelColumnCount(model):
+    """Creates a (boring) function that simply return the number of
+    columns. We can use our COL_xxx constant from above."""
+
     global h_model
     h_model.append("\tint columnCount(const QModelIndex &parent = QModelIndex() ) const;")
     global c_model
@@ -127,6 +140,10 @@ def generateModelColumnCount(model):
 
 
 def generateModelHeaderData(model, fields):
+    """Create the ::headerData() method, which returns the row
+    headers. Any field that has both a 'head' and 'name' entry is
+    eligible for display."""
+
     global h_model
     h_model.append("")
     h_model.append("\tQVariant headerData(int section, Qt::Orientation orientation,")
@@ -152,6 +169,9 @@ def generateModelHeaderData(model, fields):
 
 
 def generateModelData(model, fields, cont, code):
+    """Create the ::data() method, which returns the current data item. Can produce calculated
+    results (in the presence of a 'data_code' field entry) or checkboxes."""
+
     global h_model
     h_model.append("\tQVariant data(const QModelIndex &index, int role) const;")
     global c_model
@@ -206,6 +226,10 @@ def generateModelData(model, fields, cont, code):
 
 
 def generateModelSort(name, model, cont, fields, code):
+    """Sorting colums is most tedious when written by hand. This is
+    where this generater excells! Can use code for custom sorting
+    ('sort_code') or a different default sort order ('sort_order)."""
+
     global h_model
     # TODO: if sort:
     h_model.append("")
@@ -262,6 +286,8 @@ def generateModelSort(name, model, cont, fields, code):
 
 
 def generateModelEdit(model, fields, cont):
+    """This calls generators for all functions that are needed for in-place edit."""
+
     global h_model
     # TODO: if edit:
     h_model.append("")
@@ -272,6 +298,9 @@ def generateModelEdit(model, fields, cont):
 
 
 def generateModelFlags(model, fields):
+    """This return the Qt::ItemFlags for a field. The .yaml can define
+    a field as 'readonly', set the 'table_type' or 'checkbox'."""
+
     global h_model
     h_model.append("\tQt::ItemFlags flags(const QModelIndex &index) const;");
     global c_model
@@ -298,6 +327,10 @@ def generateModelFlags(model, fields):
 
 
 def generateModelSetData(model, fields, cont):
+    """This genererates the ::setData() method, which takes the
+    in-table edited user input and updates the structure in the
+    container."""
+
     global h_model
     h_model.append("\tbool setData(const QModelIndex &index, const QVariant &value,")
     h_model.append("\t             int role = Qt::EditRole);");
@@ -357,6 +390,8 @@ def generateModelSetData(model, fields, cont):
 
 
 def generateModel(name, model, cont, fields, code):
+    """This is the high-level function which generates the whole model."""
+
     if not model["type"] in ("QAbstractTableModel",):
         raise "cannot handle model type %s" % model["type"]
     global h_include
@@ -382,6 +417,8 @@ def generateModel(name, model, cont, fields, code):
 
 
 def generateView(view):
+    """This creates a simple view."""
+
     global h_include
     h_include.append("#include <%s>" % view["type"])
     global h_view
@@ -398,6 +435,7 @@ def generateView(view):
     c_view.append("\t: %s(parent)" % view["type"])
     # TODO: members
     c_view.append("{")
+    # TODO: should this be configurable?
     c_view.append("	setAlternatingRowColors(true);")
     c_view.append("	verticalHeader()->hide();")
     c_view.append("	horizontalHeader()->setResizeMode(QHeaderView::Stretch);")
@@ -414,8 +452,9 @@ def generateView(view):
 
 
 
-
-
+#
+# Very simple option parsing
+#
 from optparse import OptionParser
 parser = OptionParser()
 parser.add_option("-d", "--dir", dest="destdir", default=".",
@@ -428,15 +467,21 @@ parser.add_option("--impl",
                   help="generate implementation (*.cpp)")
 (options, args) = parser.parse_args()
 options.both = not options.decl and not options.impl
-
 if len(args) != 1:
     print "Usage: %s -o <output> <filename>.yaml" % sys.argv[0]
 
-basename = os.path.splitext(os.path.basename(args[0]))[0]
+
+#
+# Load the .yaml file into a python structures
+#
 stream = open(args[0])
 data = yaml.load(stream, Loader=yaml.CLoader)
-#print yaml.dump(data, Dumper=yaml.CDumper)
 
+
+#
+# Loop over all entries and create arrays of string in various h_* /
+# c_* files (for header & source code code segments)
+#
 for name in data:
     item = data[name]
     generateStruct(name, item["container"], item["fields"])
@@ -449,33 +494,31 @@ for name in data:
         generateView(item["view"])
 h_include.append("\n")
 
+
+#
+# Now write this into the two files
+#
+basename = os.path.splitext(os.path.basename(args[0]))[0]
 if options.decl or options.both:
     f = open("%s/%s.h" % (options.destdir, basename), "w")
     f.write("#ifndef %s_H\n" % basename.upper())
     f.write("#define %s_H\n\n" % basename.upper())
+    f.write("// automatically generated from %s\n\n" % args[0])
     f.write("\n".join(h_include))
     f.write("\n".join(h_struct))
     f.write("\n".join(h_container))
     f.write("\n".join(h_model))
     f.write("\n".join(h_view))
     f.write("\n#endif\n")
+
 if options.impl or options.both:
     f = open("%s/%s.cpp" % (options.destdir, basename), "w")
     f.write("#include \"%s.h\"\n" % basename)
     f.write("#include <QHeaderView>\n\n")
+    f.write("// automatically generated from %s\n\n" % args[0])
     f.write("\n".join(c_container))
     f.write("\n".join(c_col))
     # TODO: if sort
     f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n\n")
     f.write("\n".join(c_model))
     f.write("\n".join(c_view))
-
-#print "\n".join(h_include)
-#print "\n".join(h_struct)
-#print "\n".join(h_container)
-#print "\n".join(h_model)
-#print "\n".join(h_view)
-#print "\n".join(c_container)
-#print "\n".join(c_col)
-#print "\n".join(c_model)
-#print "\n".join(c_view)
