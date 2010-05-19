@@ -1,3 +1,8 @@
+# This is a .yaml file, just a way to write nested data structures in
+# a way so that they don't hurt the eyes of humans. Google for YAML to
+# get more info ...
+
+
 MorseCharacter:
   container:
     name: chars
@@ -5,21 +10,32 @@ MorseCharacter:
   model:
     name: CharacterModel
     type: QAbstractTableModel
+    # This would disable the automatically generated sort code of the model
     #sort: false
+    # This disabled editing directly inside the form:
     #edit_table: false
   view:
     name: CharacterView
     type: QTableView
+    # This would disable the automatically generated sort code of the view:
     #sort: false
   dialog:
+    # The existence of this "dialog" entry enables editing inside a form
+    # after a double-click.
     name: CharacterDialog
     head: "Morse Character"
   fields:
     - {
+    # Each normal entry has a 'name', which get's used in the C++ struct.
+    # It has also a type, again for the C++ struct.
     name: number,
     type: quint32,
+    # Every field with a 'head' will end up in one column of the table.
     head: "Number",
+    # This entry is readonly -> won't end up in the dialog form
     readonly: true,
+    # TODO: Tool tip
+    # TODO: What's this
     }
 
     - {
@@ -32,6 +48,8 @@ MorseCharacter:
     name: code,
     type: QString,
     head: "Morse",
+    # The 'sort_code' is a custom sort function that should populate
+    # the variables "s1" and "s2". They will then be used for comparison.
     sort_code: sortMorse,
     }
 
@@ -39,7 +57,14 @@ MorseCharacter:
     name: enabled,
     type: bool,
     head: "Enabled",
+    # This boolean entry has a special 'table_type', which has the only currently
+    # supported value 'checkbox'. That makes the model and the view not display
+    # "0/1" or "false/true", but instead a checkbox.
     table_type: checkbox,
+    # This reverses the initial sort order (when clicking for the
+    # first time on the column header to sort). By making the sort
+    # order descending, all enabled items will be sorted on top of the
+    # table.
     sort_order: descending,
     }
 
@@ -47,6 +72,9 @@ MorseCharacter:
     name: right,
     type: quint32,
     head: "Right",
+    # This field will be horizontally aligned to the right. Besides
+    # 'halign' (with "left", "right" and "center") you can also
+    # specify valign (with "top", "bottom" and "vcenter").
     halign: right,
     }
 
@@ -58,19 +86,26 @@ MorseCharacter:
     }
 
     - {
+    # This field has no 'head' entry -> won't be displayed in the model/view
     name: lastWrong,
     type: bool
     }
 
     - {
+    # This field has no 'type' entry -> won't end up in the struct
     name: percent,
     head: "Error Rate",
+    # The 'data_code' of code returns what the ::data() method from
+    # the model should return (and this in turn is what get's shown in
+    # the table)
     data_code: headPercent,
-    readonly: true,
     sort_code: sortPercent,
+    readonly: true,
     halign: right,
     }
   code:
+    # Code sections will be included in the generated *.h/*.cpp files
+    # at the proper locations.
     headPercent: |
       int total = chars[row].right + chars[row].wrong;
       if (total)
