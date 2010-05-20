@@ -81,9 +81,13 @@ def generateStruct(data):
     global h_struct
     h_struct.append("class %s {" % data["name"])
     h_struct.append("public:")
+    global h_include
     for field in data["fields"]:
         try:
-            h_struct.append("\t%s %s;" % (field["type"], field["name"]))
+            typ = field["type"]
+            if typ[0] == "Q":
+                addInclude(h_include, typ)
+            h_struct.append("\t%s %s;" % (typ, field["name"]))
         except KeyError:
             pass
     h_struct.append("};\n\n")
@@ -578,6 +582,9 @@ def generateView(data):
     h_view.append("	%s(QWidget *parent=0);" % view["name"])
     # TODO: members
 
+    global c_include
+    addInclude(c_include, "QHeaderView")
+
     global c_view
     c_view.append("%s::%s(QWidget *parent)" % (view["name"],view["name"]))
     c_view.append("\t: %s(parent)" % view["type"])
@@ -903,7 +910,6 @@ if options.decl or options.both:
 if options.impl or options.both:
     f = open("%s/%s.cpp" % (options.destdir, basename), "w")
     f.write("#include \"%s.h\"\n" % basename)
-    addInclude(c_include, "QHeaderView")
     f.write("\n".join(c_include))
     f.write("\n\n// automatically generated from %s\n\n" % args[0])
     f.write("\n".join(c_container))
