@@ -75,13 +75,13 @@ def addClassRef(clazz):
     if not header in h_classes:
         h_classes.append(header)
 
-def generateStruct(name, cont, fields):
+def generateStruct(data):
     "Creates the struct that contains the data fields"
 
     global h_struct
-    h_struct.append("class %s {" % name)
+    h_struct.append("class %s {" % data["name"])
     h_struct.append("public:")
-    for field in fields:
+    for field in data["fields"]:
         try:
             h_struct.append("\t%s %s;" % (field["type"], field["name"]))
         except KeyError:
@@ -89,27 +89,29 @@ def generateStruct(name, cont, fields):
     h_struct.append("};\n\n")
 
 
-def generateContainer(name, cont):
+def generateContainer(data):
     "Creates the container (usually QLIst) that contains the structs."
 
+    cont = data["container"]
     global h_include
     addInclude(h_include, cont["type"])
     global h_container
-    h_container.append("extern %s<%s> %s;\n\n" % ( cont["type"], name, cont["name"]) )
+    h_container.append("extern %s<%s> %s;\n\n" % (cont["type"], data["name"], cont["name"]) )
     global c_container
-    c_container.append("%s<%s> %s;\n\n" % ( cont["type"], name, cont["name"]) )
+    c_container.append("%s<%s> %s;\n\n" % ( cont["type"], data["name"], cont["name"]) )
 
 
-def generateColumnConsts(model, fields):
+def generateColumnConsts(data):
     """Generates "const int COL_xxx = n;" constants for easier
     referencing to the columns."""
 
+    model = data["model"]
     global c_col
     global col_prefix
     global col_count
     col_prefix = "COL_%s" % model["name"].upper()
     col_count = 0
-    for field in fields:
+    for field in data["fields"]:
         if not field.has_key("head"):
             continue
         try:
@@ -121,9 +123,11 @@ def generateColumnConsts(model, fields):
     c_col.append("\n")
 
 
-def generateModelContructor(model, code):
+def generateModelContructor(data):
     "Creates the (boring) constructor of the model."
 
+    model = data["model"]
+    code = data["code"]
     global h_model
     h_model.append("\t%s(QObject *parent=0);" % model["name"])
     h_model.append("")
@@ -138,10 +142,12 @@ def generateModelContructor(model, code):
     c_model.append("}\n")
 
 
-def generateModelRowCount(model, cont):
+def generateModelRowCount(data):
     """Creates an interface function that simply returns number of
     elements in the container."""
 
+    model = data["model"]
+    cont = data["container"]
     global h_model
     h_model.append("\tint rowCount(const QModelIndex &parent = QModelIndex()) const;")
     global c_model
@@ -152,10 +158,11 @@ def generateModelRowCount(model, cont):
     c_model.append("}\n")
 
 
-def generateModelColumnCount(model):
+def generateModelColumnCount(data):
     """Creates a (boring) function that simply return the number of
     columns. We can use our COL_xxx constant from above."""
 
+    model = data["model"]
     global h_model
     h_model.append("\tint columnCount(const QModelIndex &parent = QModelIndex() ) const;")
     global c_model
@@ -166,11 +173,12 @@ def generateModelColumnCount(model):
     c_model.append("}\n")
 
 
-def generateModelHeaderData(model, fields):
+def generateModelHeaderData(data):
     """Create the ::headerData() method, which returns the row
     headers. Any field that has both a 'head' and 'name' entry is
     eligible for display."""
 
+    model = data["model"]
     global h_model
     h_model.append("")
     h_model.append("\tQVariant headerData(int section, Qt::Orientation orientation,")
@@ -185,7 +193,7 @@ def generateModelHeaderData(model, fields):
     c_model.append("\t\treturn tr(\"Row %1\").arg(section);")
     c_model.append("\t} else {")
     c_model.append("\t\tswitch (section) {")
-    for field in fields:
+    for field in data["fields"]:
         if field.has_key("head") and field.has_key("name"):
             c_model.append("\t\tcase %s_%s:" % (col_prefix, field["name"].upper() ))
             c_model.append("\t\t\treturn tr(\"%s\");" % field["head"] )
@@ -195,10 +203,13 @@ def generateModelHeaderData(model, fields):
     c_model.append("}\n")
 
 
-def generateModelData(model, fields, cont, code):
+def generateModelData(data):
     """Create the ::data() method, which returns the current data item. Can produce calculated
     results (in the presence of a 'data_code' field entry) or checkboxes."""
 
+    model = data["model"]
+    cont = data["container"]
+    code = data["code"]
     global h_model
     h_model.append("\tQVariant data(const QModelIndex &index, int role) const;")
     global c_model
@@ -216,7 +227,7 @@ def generateModelData(model, fields, cont, code):
     c_model.append("\t\tswitch (index.column()) {")
     col_checkbox = False
     col_align = False
-    for field in fields:
+    for field in data["fields"]:
         if not field.has_key("head"):
             continue
         if field.has_key("halign") or field.has_key("valign"):
@@ -241,7 +252,7 @@ def generateModelData(model, fields, cont, code):
         c_model.append("\t} else")
         c_model.append("\tif (role == Qt::CheckStateRole) {")
         c_model.append("\t\tswitch (index.column()) {")
-        for field in fields:
+        for field in data["fields"]:
             if get(field, "table_type") != "checkbox":
                 continue
             c_model.append("\t\tcase %s_%s: {" % (col_prefix, field["name"].upper()) )
@@ -253,7 +264,7 @@ def generateModelData(model, fields, cont, code):
         c_model.append("\t} else")
         c_model.append("\tif (role == Qt::TextAlignmentRole) {")
         c_model.append("\t\tswitch (index.column()) {")
-        for field in fields:
+        for field in data["fields"]:
             halign = get(field, "halign", "left").capitalize()
             valign = get(field, "valign", "vcenter").capitalize()
             if halign == "Left" and valign == "Vcenter":
@@ -268,11 +279,14 @@ def generateModelData(model, fields, cont, code):
     c_model.append("}\n")
 
 
-def generateModelSort(name, model, cont, fields, code):
+def generateModelSort(data):
     """Sorting colums is most tedious when written by hand. This is
     where this generater excells! Can use code for custom sorting
     ('sort_code') or a different default sort order ('sort_order)."""
 
+    model = data["model"]
+    cont = data["container"]
+    code = data["code"]
     global h_model
     h_model.append("")
     h_model.append("\t// Sort support:")
@@ -281,7 +295,7 @@ def generateModelSort(name, model, cont, fields, code):
     global c_model
 
     # First the static sort functions
-    for field in fields:
+    for field in data["fields"]:
         if not field.has_key("head"):
             continue
         c_model.append("static bool sort%s%s(const %s &one, const %s two)" % (
@@ -311,7 +325,7 @@ def generateModelSort(name, model, cont, fields, code):
     c_model.append("\tsortOrder = order;")
     c_model.append("")
     c_model.append("\tswitch (column) {")
-    for field in fields:
+    for field in data["fields"]:
         if not field.has_key("head"):
             continue
         c_model.append("\tcase %s_%s:" % (col_prefix, field["name"].upper()) )
@@ -327,21 +341,22 @@ def generateModelSort(name, model, cont, fields, code):
     c_model.append("}\n")
 
 
-def generateModelEdit(model, fields, cont):
+def generateModelEdit(data):
     """This calls generators for all functions that are needed for in-place edit."""
 
     global h_model
     h_model.append("")
     h_model.append("\t// Edit support:")
     h_model.append("\tvoid store(const QString &sign, const QString &code);")
-    generateModelFlags(model, fields)
-    generateModelSetData(model, fields, cont)
+    generateModelFlags(data)
+    generateModelSetData(data)
 
 
-def generateModelFlags(model, fields):
+def generateModelFlags(data):
     """This return the Qt::ItemFlags for a field. The .yaml can define
     a field as 'readonly', set the 'table_type' or 'checkbox'."""
 
+    model = data["model"]
     global h_model
     h_model.append("\tQt::ItemFlags flags(const QModelIndex &index) const;");
     global c_model
@@ -354,7 +369,7 @@ def generateModelFlags(model, fields):
     c_model.append("\tflags |= Qt::ItemIsEnabled;")
     c_model.append("")
     c_model.append("\tswitch (index.column()) {")
-    for field in fields:
+    for field in data["fields"]:
         if not field.has_key("head") or get(field, "readonly"):
             continue
         c_model.append("\tcase %s_%s:" % (col_prefix, field["name"].upper()) )
@@ -367,11 +382,13 @@ def generateModelFlags(model, fields):
     c_model.append("}\n")
 
 
-def generateModelSetData(model, fields, cont):
+def generateModelSetData(data):
     """This genererates the ::setData() method, which takes the
     in-table edited user input and updates the structure in the
     container."""
 
+    model = data["model"]
+    cont = data["container"]
     global h_model
     h_model.append("\tbool setData(const QModelIndex &index, const QVariant &value,")
     h_model.append("\t             int role = Qt::EditRole);");
@@ -386,7 +403,7 @@ def generateModelSetData(model, fields, cont):
     c_model.append("\tif (role == Qt::EditRole) {")
     c_model.append("\t\tswitch (index.column()) {")
     has_checkbox = False
-    for field in fields:
+    for field in data["fields"]:
         if not field.has_key("head") or get(field, "readonly"):
             continue
         if get(field, "table_type") == "checkbox":
@@ -414,7 +431,7 @@ def generateModelSetData(model, fields, cont):
     c_model.append("\t}")
     if has_checkbox:
         c_model.append("\tif (role == Qt::CheckStateRole) {")
-        for field in fields:
+        for field in data["fields"]:
             if not field.has_key("head") or get(field, "readonly"):
                 continue
             if get(field, "table_type") != "checkbox":
@@ -430,9 +447,10 @@ def generateModelSetData(model, fields, cont):
     c_model.append("}\n")
 
 
-def generateModel(name, model, cont, fields, code):
+def generateModel(data):
     """This is the high-level function which generates the whole model."""
 
+    model = data["model"]
     if not model["type"] in ("QAbstractTableModel",):
         raise "cannot handle model type %s" % model["type"]
     global h_include
@@ -444,26 +462,27 @@ def generateModel(name, model, cont, fields, code):
     h_model.append("\tQ_OBJECT")
     h_model.append("public:")
 
-    generateColumnConsts(model, fields)
-    generateModelContructor(model, code)
-    generateModelRowCount(model, cont)
-    generateModelColumnCount(model)
-    generateModelHeaderData(model, fields)
-    generateModelData(model, fields, cont, code)
+    generateColumnConsts(data)
+    generateModelContructor(data)
+    generateModelRowCount(data)
+    generateModelColumnCount(data)
+    generateModelHeaderData(data)
+    generateModelData(data)
     if get(model, "sort", True):
         global has_sort
         has_sort = True
-        generateModelSort(name, model, cont, fields, code)
+        generateModelSort(data)
     if get(model, "edit_table", True):
-        generateModelEdit(model, fields, cont)
+        generateModelEdit(data)
     # TODO: members
     h_model.append("};\n\n")
     c_model.append("")
 
 
-def generateView(name, view, model, dia):
+def generateView(data):
     """This creates a simple view."""
 
+    view = data["view"]
     global h_include
     addInclude(h_include, view["type"])
     global h_view
@@ -493,23 +512,25 @@ def generateView(name, view, model, dia):
         c_view.append("\tsetSortingEnabled(true);")
         c_view.append("\tsortByColumn(0, Qt::AscendingOrder);")
         c_view.append("\tsetEditTriggers(QAbstractItemView::AnyKeyPressed | QAbstractItemView::EditKeyPressed);")
-        if dia:
+        if data.has_key("dialog"):
             c_view.append("\tconnect(this, SIGNAL(doubleClicked(const QModelIndex &)), SLOT(slotEdit(const QModelIndex &)) );")
     c_view.append("}\n")
 
     if get(view, "delete") or get(view, "insert"):
-        generateViewInsertDelete(name, view, model)
-    if dia:
-        generateViewSlotEdit(name, view, model, dia)
+        generateViewInsertDelete(data)
+    if data.has_key("dialog"):
+        generateViewSlotEdit(data)
 
     h_view.append("};\n")
 
 
-
-def generateViewSlotEdit(name, view, model, dia):
+def generateViewSlotEdit(data):
     """Adds code to handle the call of the editor dialog due after a
     double-click."""
 
+    view = data["view"]
+    dia = data["dialog"]
+    model = data["model"]
     global h_view
     h_view.append("public slots:")
     h_view.append("\tvoid slotEdit(const QModelIndex &index);")
@@ -528,7 +549,10 @@ def generateViewSlotEdit(name, view, model, dia):
     c_view.append("\t}")
     c_view.append("}\n")
 
-def generateViewInsertDelete(name, view, model):
+
+def generateViewInsertDelete(data):
+    view = data["view"]
+    dia = data["dialog"]
     global c_include
     addInclude(c_include, "QKeyEvent")
 
@@ -564,10 +588,11 @@ def editorForTyp(typ):
     return (None, None, None)
 
 
-def generateDialog(name, dia, fields):
+def generateDialog(data):
     """This hefty generator function generates a QDialog-derived class
     to out-of-table editing of data records."""
 
+    dia = data["dialog"]
     global c_include
 
     title = get(dia, "head")
@@ -582,14 +607,14 @@ def generateDialog(name, dia, fields):
     h_dialog.append("{")
     h_dialog.append("\tQ_OBJECT")
     h_dialog.append("public:")
-    h_dialog.append("\t%s(%s *record, QWidget *parent=0, Qt::WindowFlags f=0);" % (dia["name"], name))
+    h_dialog.append("\t%s(%s *record, QWidget *parent=0, Qt::WindowFlags f=0);" % (dia["name"], data["name"]))
     h_dialog.append("\tvirtual void accept();")
     h_dialog.append("")
-    h_dialog.append("\t%s *m;" % name)
+    h_dialog.append("\t%s *m;" % data["name"])
 
     global c_dialog
     c_dialog.append("%s::%s(%s *record, QWidget *parent, Qt::WindowFlags f)"
-                    % (dia["name"], dia["name"], name))
+                    % (dia["name"], dia["name"], data["name"]))
     c_dialog.append("\t: QDialog(parent, f)")
     c_dialog.append("\t, m(record)")
     c_dialog.append("{")
@@ -599,7 +624,7 @@ def generateDialog(name, dia, fields):
     c_layout = []
     c_get    = []
     c_set    = []
-    for field in fields:
+    for field in data["fields"]:
         if not (field.has_key("type") and field.has_key("name") and field.has_key("head")):
             continue
         if get(field, "readonly"):
@@ -679,25 +704,26 @@ if len(args) != 1:
 # Load the .yaml file into a python structures
 #
 stream = open(args[0])
-data = yaml.load(stream, Loader=yaml.CLoader)
+alldata = yaml.load(stream, Loader=yaml.CLoader)
 
 
 #
 # Loop over all entries and create arrays of string in various h_* /
 # c_* files (for header & source code code segments)
 #
-for name in data:
-    item = data[name]
-    generateStruct(name, item["container"], item["fields"])
-    generateContainer(name, item["container"])
-    if not item.has_key("code"):
-        item["code"] = {}
-    if item.has_key("model"):
-        generateModel(name, item["model"], item["container"], item["fields"], item["code"])
-    if item.has_key("view"):
-        generateView(name, item["view"], item["model"], get(item, "dialog"))
-    if item.has_key("dialog"):
-        generateDialog(name, item["dialog"], item["fields"])
+for name in alldata:
+    data = alldata[name]
+    data["name"] = name
+    generateStruct(data)
+    generateContainer(data)
+    if not data.has_key("code"):
+        data["code"] = {}
+    if data.has_key("model"):
+        generateModel(data)
+    if data.has_key("view"):
+        generateView(data)
+    if data.has_key("dialog"):
+        generateDialog(data)
 h_include.append("\n")
 if h_classes: h_classes.append("\n")
 if h_view: h_view.append("")
