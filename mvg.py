@@ -346,7 +346,7 @@ def generateModelEdit(data):
 
     global h_model
     h_model.append("")
-    h_model.append("\t// Edit support:")
+    h_model.append("\t// In-Table edit support:")
     h_model.append("\tvoid store(const QString &sign, const QString &code);")
     generateModelFlags(data)
     generateModelSetData(data)
@@ -447,10 +447,46 @@ def generateModelSetData(data):
     c_model.append("}\n")
 
 
+def generateModelInsertRows(data):
+    model = data["model"]
+    cont = data["container"]
+    global h_model
+    h_model.append("\tvirtual bool insertRows(int row, int count, const QModelIndex &parent=QModelIndex());")
+    global c_model
+    c_model.append("bool %s::insertRows(int row, int count, const QModelIndex &parent)" % model["name"]);
+    c_model.append("{")
+    c_model.append("\tbeginInsertRows(parent, row, row+1);");
+    c_model.append("\t%s m;" % data["name"])
+    c_model.append("\tint n = count;")
+    c_model.append("\twhile (n--)")
+    c_model.append("\t\t%s.insert(row, m);" % cont["name"])
+    c_model.append("\tendInsertRows();");
+    c_model.append("\treturn true;\n")
+    c_model.append("}\n")
+
+
+def generateModelRemoveRows(data):
+    model = data["model"]
+    cont = data["container"]
+    global h_model
+    h_model.append("\tvirtual bool removeRows(int row, int count, const QModelIndex &parent=QModelIndex());")
+    global c_model
+    c_model.append("bool %s::removeRows(int row, int count, const QModelIndex &parent)" % model["name"]);
+    c_model.append("{")
+    c_model.append("\tbeginRemoveRows(parent, row, row+count-1);");
+    c_model.append("\tint n = count;")
+    c_model.append("\twhile (n--)")
+    c_model.append("\t\t%s.removeAt(row);" % cont["name"])
+    c_model.append("\tendRemoveRows();");
+    c_model.append("\treturn true;\n")
+    c_model.append("}\n")
+
+
 def generateModel(data):
     """This is the high-level function which generates the whole model."""
 
     model = data["model"]
+    view = get(data, "view", {})
     if not model["type"] in ("QAbstractTableModel",):
         raise "cannot handle model type %s" % model["type"]
     global h_include
@@ -474,6 +510,10 @@ def generateModel(data):
         generateModelSort(data)
     if get(model, "edit_table", True):
         generateModelEdit(data)
+    if get(view, "insert"):
+        generateModelInsertRows(data)
+    if get(view, "delete"):
+        generateModelRemoveRows(data)
     # TODO: members
     h_model.append("};\n\n")
     c_model.append("")
@@ -539,7 +579,7 @@ def generateViewSlotEdit(data):
     c_view.append("void %s::slotEdit(const QModelIndex &index)" % view["name"])
     c_view.append("{")
     c_view.append("\tint row = index.row();")
-    c_view.append("\tstruct %s m = chars[row];" % name)
+    c_view.append("\t%s m = chars[row];" % data["name"])
     c_view.append("\tQDialog *dia = new %s(&m, this);" % dia["name"])
     c_view.append("\tif (dia->exec() == QDialog::Accepted) {")
     c_view.append("\t\tchars[row] = m;")
@@ -547,12 +587,14 @@ def generateViewSlotEdit(data):
     c_view.append("\t\tQModelIndex right = model()->index(row, COL_%s_LAST);" % model["name"].upper())
     c_view.append("\t\tdataChanged(left, right);")
     c_view.append("\t}")
+    c_view.append("\tdelete dia;")
     c_view.append("}\n")
 
 
 def generateViewInsertDelete(data):
     view = data["view"]
     dia = data["dialog"]
+    cont = data["container"]
     global c_include
     addInclude(c_include, "QKeyEvent")
 
@@ -565,14 +607,52 @@ def generateViewInsertDelete(data):
     c_view.append("{")
     c_view.append("\tswitch (event->key()) {")
     if get(view, "insert"):
-        c_view.append("\tcase Qt::Key_Insert:")
+        c_view.append("\tcase Qt::Key_Insert: {")
+        c_view.append("\t\t%s m;" % name)
+        # Initialize field. A simple memset() doesn't work because of possible QStrings
+        for field in data["fields"]:
+            typ = get(field, "type")
+            if not typ:
+                continue
+            default_code = get(field, "default_code")
+            default = get(field, "default")
+            if default_code:
+                default = default_code
+            elif default:
+                if typ == "QString":
+                    default = "\"%s\"" % default
+            elif typ == "bool":
+                default = "false"
+            elif typ == "QString":
+                default = "QString::null";
+            elif typ == "quint32":
+                default = "0"
+            else:
+                raise "Unknown default for field type %s" % typ
+            c_view.append("\t\tm.%s = %s;" % (field["name"], default) )
+        c_view.append("\t\tQDialog *dia = new %s(&m, this);" % dia["name"])
+        c_view.append("\t\tif (dia->exec() == QDialog::Accepted) {")
+        c_view.append("\t\t\tint row = 0;")
+        c_view.append("\t\t\tif (currentIndex().isValid())")
+        c_view.append("\t\t\t\trow = currentIndex().row();")
+        c_view.append("\t\t\tif (model()->insertRow(row))")
+        c_view.append("\t\t\t\tsetCurrentIndex(model()->index(row+1, 0));");
+        c_view.append("\t\t\t%s[row] = m;" % cont["name"])
+        c_view.append("\t\t}")
+        c_view.append("\t\tdelete dia;")
         c_view.append("\t\treturn;")
+        c_view.append("\t\t}")
     if get(view, "delete"):
         c_view.append("\tcase Qt::Key_Delete:")
+        c_view.append("\t\tif (!currentIndex().isValid())")
+        c_view.append("\t\t\treturn;")
+        # TODO: ask for confirmation?
+        # TODO: check selection
+        c_view.append("\t\tmodel()->removeRows(currentIndex().row(), 1);")
         c_view.append("\t\treturn;")
-    c_view.append("}");
+    c_view.append("\t}");
     c_view.append("\tQAbstractItemView::keyPressEvent(event);")
-    c_view.append("}")
+    c_view.append("}\n")
 
 
 def editorForTyp(typ):

@@ -32,6 +32,9 @@ MorseCharacter:
     # It has also a type, again for the C++ struct.
     name: number,
     type: quint32,
+    # This allows the setting of default values for inserted data
+    # default: 0
+    default_code: chars.count(),
     # Every field with a 'head' will end up in one column of the table.
     head: "Number",
     # This entry is readonly -> won't end up in the dialog form
