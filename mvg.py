@@ -557,9 +557,16 @@ def generateView(data):
     c_view.append("}\n")
 
     if get(view, "delete") or get(view, "insert"):
-        generateViewInsertDelete(data)
+        if data.has_key("container"):
+            generateViewInsertDelete(data)
+        else:
+            print "Warning: cannot generate view inser/delete function without container"
+
     if data.has_key("dialog"):
-        generateViewSlotEdit(data)
+        if data.has_key("container"):
+            generateViewSlotEdit(data)
+        else:
+            print "Warning: cannot generate edit slot in view without container"
 
     h_view.append("};\n")
 
@@ -570,7 +577,6 @@ def generateViewSlotEdit(data):
 
     view = data["view"]
     dia = data["dialog"]
-    model = data["model"]
     global h_view
     h_view.append("public slots:")
     h_view.append("\tvoid slotEdit(const QModelIndex &index);")
@@ -584,7 +590,7 @@ def generateViewSlotEdit(data):
     c_view.append("\tif (dia->exec() == QDialog::Accepted) {")
     c_view.append("\t\tchars[row] = m;")
     c_view.append("\t\tQModelIndex left = model()->index(row, 0);")
-    c_view.append("\t\tQModelIndex right = model()->index(row, COL_%s_LAST);" % model["name"].upper())
+    c_view.append("\t\tQModelIndex right = model()->index(row, 99);")
     c_view.append("\t\tdataChanged(left, right);")
     c_view.append("\t}")
     c_view.append("\tdelete dia;")
@@ -593,7 +599,7 @@ def generateViewSlotEdit(data):
 
 def generateViewInsertDelete(data):
     view = data["view"]
-    dia = data["dialog"]
+    dia = get(data, "dialog")
     cont = data["container"]
     global c_include
     addInclude(c_include, "QKeyEvent")
@@ -607,41 +613,44 @@ def generateViewInsertDelete(data):
     c_view.append("{")
     c_view.append("\tswitch (event->key()) {")
     if get(view, "insert"):
-        c_view.append("\tcase Qt::Key_Insert: {")
-        c_view.append("\t\t%s m;" % name)
-        # Initialize field. A simple memset() doesn't work because of possible QStrings
-        for field in data["fields"]:
-            typ = get(field, "type")
-            if not typ:
-                continue
-            default_code = get(field, "default_code")
-            default = get(field, "default")
-            if default_code:
-                default = default_code
-            elif default:
-                if typ == "QString":
-                    default = "\"%s\"" % default
-            elif typ == "bool":
-                default = "false"
-            elif typ == "QString":
-                default = "QString::null";
-            elif typ == "quint32":
-                default = "0"
-            else:
-                raise "Unknown default for field type %s" % typ
-            c_view.append("\t\tm.%s = %s;" % (field["name"], default) )
-        c_view.append("\t\tQDialog *dia = new %s(&m, this);" % dia["name"])
-        c_view.append("\t\tif (dia->exec() == QDialog::Accepted) {")
-        c_view.append("\t\t\tint row = 0;")
-        c_view.append("\t\t\tif (currentIndex().isValid())")
-        c_view.append("\t\t\t\trow = currentIndex().row();")
-        c_view.append("\t\t\tif (model()->insertRow(row))")
-        c_view.append("\t\t\t\tsetCurrentIndex(model()->index(row+1, 0));");
-        c_view.append("\t\t\t%s[row] = m;" % cont["name"])
-        c_view.append("\t\t}")
-        c_view.append("\t\tdelete dia;")
-        c_view.append("\t\treturn;")
-        c_view.append("\t\t}")
+        if dia:
+            c_view.append("\tcase Qt::Key_Insert: {")
+            c_view.append("\t\t%s m;" % name)
+            # Initialize field. A simple memset() doesn't work because of possible QStrings
+            for field in data["fields"]:
+                typ = get(field, "type")
+                if not typ:
+                    continue
+                default_code = get(field, "default_code")
+                default = get(field, "default")
+                if default_code:
+                    default = default_code
+                elif default:
+                    if typ == "QString":
+                        default = "\"%s\"" % default
+                elif typ == "bool":
+                    default = "false"
+                elif typ == "QString":
+                    default = "QString::null";
+                elif typ == "quint32":
+                    default = "0"
+                else:
+                    raise "Unknown default for field type %s" % typ
+                c_view.append("\t\tm.%s = %s;" % (field["name"], default) )
+            c_view.append("\t\tQDialog *dia = new %s(&m, this);" % dia["name"])
+            c_view.append("\t\tif (dia->exec() == QDialog::Accepted) {")
+            c_view.append("\t\t\tint row = 0;")
+            c_view.append("\t\t\tif (currentIndex().isValid())")
+            c_view.append("\t\t\t\trow = currentIndex().row();")
+            c_view.append("\t\t\tif (model()->insertRow(row))")
+            c_view.append("\t\t\t\tsetCurrentIndex(model()->index(row+1, 0));");
+            c_view.append("\t\t\t%s[row] = m;" % cont["name"])
+            c_view.append("\t\t}")
+            c_view.append("\t\tdelete dia;")
+            c_view.append("\t\treturn;")
+            c_view.append("\t\t}")
+        else:
+            print "Warning: cannot generate insert view without dialog"
     if get(view, "delete"):
         c_view.append("\tcase Qt::Key_Delete:")
         c_view.append("\t\tif (!currentIndex().isValid())")
@@ -794,13 +803,22 @@ alldata = yaml.load(stream, Loader=yaml.CLoader)
 for name in alldata:
     data = alldata[name]
     data["name"] = name
+    if not data.has_key("fields"):
+        print "Warning: can't do anything without fields"
+        continue
     generateStruct(data)
-    generateContainer(data)
+    if data.has_key("container"):
+        generateContainer(data)
     if not data.has_key("code"):
         data["code"] = {}
     if data.has_key("model"):
-        generateModel(data)
+        if not data.has_key("container"):
+            print "Warning: cannot generate model without container"
+        else:
+            generateModel(data)
     if data.has_key("view"):
+        #if not data.has_key("model"):
+        #    print "Warning: cannot generate view without model"
         generateView(data)
     if data.has_key("dialog"):
         generateDialog(data)
@@ -838,7 +856,7 @@ if options.impl or options.both:
     f.write("#include \"%s.h\"\n" % basename)
     addInclude(c_include, "QHeaderView")
     f.write("\n".join(c_include))
-    f.write("\n// automatically generated from %s\n\n" % args[0])
+    f.write("\n\n// automatically generated from %s\n\n" % args[0])
     f.write("\n".join(c_container))
     f.write("\n".join(c_col))
     if has_sort:
