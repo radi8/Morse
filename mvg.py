@@ -708,6 +708,10 @@ def generateDialog(data):
     c_dialog.append("\t, m(record)")
     c_dialog.append("{")
     c_dialog.append("\tsetWindowTitle(%s);" % title)
+    xsize = get(dia, "xsize")
+    ysize = get(dia, "ysize")
+    if xsize and ysize:
+        c_dialog.append("\tresize(%s, %s);" % (xsize, ysize))
     c_dialog.append("")
 
     c_layout = []

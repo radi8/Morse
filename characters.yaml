@@ -26,6 +26,8 @@ MorseCharacter:
     # after a double-click.
     name: CharacterDialog
     head: "Morse Character"
+    xsize: 500
+    ysize: 250
   fields:
     - {
     # Each normal entry has a 'name', which get's used in the C++ struct.
