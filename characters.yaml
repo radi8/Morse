@@ -38,7 +38,7 @@ MorseCharacter:
     # default: 0
     default_code: chars.count(),
     # Every field with a 'head' will end up in one column of the table.
-    head: "Number",
+    head: "Position",
     # This entry is readonly -> won't end up in the dialog form
     readonly: true,
     # TODO: Tool tip
@@ -48,13 +48,13 @@ MorseCharacter:
     - {
     name: sign,
     type: QString,
-    head: "Number",
+    head: "&Sign",
     }
 
     - {
     name: code,
     type: QString,
-    head: "Morse",
+    head: "&Morse",
     # The 'sort_code' is a custom sort function that should populate
     # the variables "s1" and "s2". They will then be used for comparison.
     sort_code: sortMorse,
@@ -63,7 +63,7 @@ MorseCharacter:
     - {
     name: enabled,
     type: bool,
-    head: "Enabled",
+    head: "&Enabled",
     # This boolean entry has a special 'table_type', which has the only currently
     # supported value 'checkbox'. That makes the model and the view not display
     # "0/1" or "false/true", but instead a checkbox.
@@ -78,7 +78,7 @@ MorseCharacter:
     - {
     name: right,
     type: quint32,
-    head: "Right",
+    head: "&Right",
     # This field will be horizontally aligned to the right. Besides
     # 'halign' (with "left", "right" and "center") you can also
     # specify valign (with "top", "bottom" and "vcenter").
@@ -88,7 +88,7 @@ MorseCharacter:
     - {
     name: wrong,
     type: quint32,
-    head: "Wrong",
+    head: "&Wrong",
     halign: right,
     }
 

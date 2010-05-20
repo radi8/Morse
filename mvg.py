@@ -196,7 +196,7 @@ def generateModelHeaderData(data):
     for field in data["fields"]:
         if field.has_key("head") and field.has_key("name"):
             c_model.append("\t\tcase %s_%s:" % (col_prefix, field["name"].upper() ))
-            c_model.append("\t\t\treturn tr(\"%s\");" % field["head"] )
+            c_model.append("\t\t\treturn tr(\"%s\");" % field["head"].replace("&", "") )
     c_model.append("\t\t}")
     c_model.append("\t}")
     c_model.append("\treturn QVariant();")
