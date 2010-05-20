@@ -7,6 +7,7 @@ MorseCharacter:
   container:
     name: chars
     type: QList
+    save: true
   model:
     name: CharacterModel
     type: QAbstractTableModel
@@ -41,6 +42,8 @@ MorseCharacter:
     head: "Position",
     # This entry is readonly -> won't end up in the dialog form
     readonly: true,
+    # Don't save this field into the file
+    save: false,
     # TODO: Tool tip
     # TODO: What's this
     }

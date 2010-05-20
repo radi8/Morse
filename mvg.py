@@ -98,7 +98,52 @@ def generateContainer(data):
     global h_container
     h_container.append("extern %s<%s> %s;\n\n" % (cont["type"], data["name"], cont["name"]) )
     global c_container
-    c_container.append("%s<%s> %s;\n\n" % ( cont["type"], data["name"], cont["name"]) )
+    c_container.append("%s<%s> %s;\n" % ( cont["type"], data["name"], cont["name"]) )
+    if get(cont, "save"):
+        generateContainerSave(data)
+
+def generateContainerSave(data):
+    cont = data["container"]
+    name = cont["name"].capitalize()
+    global h_include
+    addInclude(h_include, "QString")
+    global c_include
+    addInclude(c_include, "QFile")
+    addInclude(c_include, "QTextStream")
+    global h_container
+    h_container.append("bool save%s(const QString &fname);" % name)
+    global c_container
+    c_container.append("bool save%s(const QString &fname)" % name)
+    c_container.append("{")
+    c_container.append("\tQFile file(fname);")
+    c_container.append("\tif (! file.open(QIODevice::WriteOnly | QIODevice::Text))")
+    c_container.append("\t\treturn false;")
+    c_container.append("\tQTextStream f(&file);")
+    c_container.append("\tforeach (MorseCharacter m, chars) {")
+    n = 0
+    for field in data["fields"]:
+        if not get(field, "save", True):
+            continue
+        typ = get(field, "type")
+        if not typ:
+            continue
+        if n:
+            comma = "\t\t  << \", \" "
+        else:
+            comma = "\t\tf "
+        if typ in ("quint32", "bool"):
+            save = "<< m.%s" % field["name"]
+        elif typ == "QString":
+            save = """<< '"' << m.%s.replace('"',"\\\\\\"") << '\"'""" % field["name"]
+        else:
+            raise "can't save type %s" % typ
+        c_container.append("%s%s" % (comma, save))
+        n += 1
+    c_container[-1] = "%s << \"\\n\";" % c_container[-1]
+    c_container.append("\t}")
+    c_container.append("\tfile.close();")
+    c_container.append("\treturn true;")
+    c_container.append("}")
 
 
 def generateColumnConsts(data):
