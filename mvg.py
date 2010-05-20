@@ -11,7 +11,6 @@
 # Currently possible:
 # * Displaying
 # * in-place edit
-# TODO:
 # * adding records
 # * deleting records
 # * editing records via QDialog
@@ -90,7 +89,7 @@ def generateStruct(data):
             h_struct.append("\t%s %s;" % (typ, field["name"]))
         except KeyError:
             pass
-    h_struct.append("};\n\n")
+    h_struct.append("};")
 
 
 def generateContainer(data):
@@ -100,7 +99,7 @@ def generateContainer(data):
     global h_include
     addInclude(h_include, cont["type"])
     global h_container
-    h_container.append("extern %s<%s> %s;\n\n" % (cont["type"], data["name"], cont["name"]) )
+    h_container.append("extern %s<%s> %s;\n" % (cont["type"], data["name"], cont["name"]) )
     global c_container
     c_container.append("%s<%s> %s;\n" % ( cont["type"], data["name"], cont["name"]) )
     if get(cont, "save"):
@@ -183,7 +182,6 @@ def generateModelContructor(data):
     global c_model
     c_model.append("%s::%s(QObject *parent)" % (model["name"], model["name"]) )
     c_model.append("\t: %s(parent)" % model["type"])
-    # TODO: optional member initialization
     c_model.append("{")
     name = "construct" + model["name"]
     if code.has_key(name):
@@ -528,7 +526,7 @@ def generateModelRemoveRows(data):
     c_model.append("\t\t%s.removeAt(row);" % cont["name"])
     c_model.append("\tendRemoveRows();");
     c_model.append("\treturn true;\n")
-    c_model.append("}\n")
+    c_model.append("}")
 
 
 def generateModel(data):
@@ -563,9 +561,7 @@ def generateModel(data):
         generateModelInsertRows(data)
     if get(view, "delete"):
         generateModelRemoveRows(data)
-    # TODO: members
-    h_model.append("};\n\n")
-    c_model.append("")
+    h_model.append("};")
 
 
 def generateView(data):
@@ -580,7 +576,6 @@ def generateView(data):
     h_view.append("	Q_OBJECT")
     h_view.append("public:")
     h_view.append("	%s(QWidget *parent=0);" % view["name"])
-    # TODO: members
 
     global c_include
     addInclude(c_include, "QHeaderView")
@@ -588,7 +583,6 @@ def generateView(data):
     global c_view
     c_view.append("%s::%s(QWidget *parent)" % (view["name"],view["name"]))
     c_view.append("\t: %s(parent)" % view["type"])
-    # TODO: members
     c_view.append("{")
     # TODO: should this be configurable?
     c_view.append("	setAlternatingRowColors(true);")
@@ -620,7 +614,7 @@ def generateView(data):
         else:
             print "Warning: cannot generate edit slot in view without container"
 
-    h_view.append("};\n")
+    h_view.append("};")
 
 
 def generateViewSlotEdit(data):
@@ -646,7 +640,7 @@ def generateViewSlotEdit(data):
     c_view.append("\t\tdataChanged(left, right);")
     c_view.append("\t}")
     c_view.append("\tdelete dia;")
-    c_view.append("}\n")
+    c_view.append("}")
 
 
 def generateViewInsertDelete(data):
@@ -796,7 +790,7 @@ def generateDialog(data):
         c_get.append("\tm->%s = %s->%s();" % (field["name"], name, getter))
 
     h_dialog.append("\tQDialogButtonBox *okCancel;");
-    h_dialog.append("};\n")
+    h_dialog.append("};")
 
     addInclude(c_include, "QFormLayout")
     c_dialog.append("")
@@ -822,7 +816,7 @@ def generateDialog(data):
     c_dialog.append("{")
     c_dialog.extend(c_get)
     c_dialog.append("\tQDialog::accept();")
-    c_dialog.append("}\n")
+    c_dialog.append("}")
 
 
 
@@ -878,16 +872,14 @@ for name in alldata:
         generateView(data)
     if data.has_key("dialog"):
         generateDialog(data)
-h_include.append("\n")
-if h_classes: h_classes.append("\n")
-if h_view: h_view.append("")
 
-#print "\n".join(h_include)
-#print "\n".join(h_classes)
-#print "\n".join(h_dialog)
-#print "\n".join(c_include)
-#print "\n".join(c_dialog)
-#sys.exit(1)
+
+def writeArr(f, arr):
+    if arr:
+        f.write("\n\n")
+        f.write("\n".join(arr))
+        f.write("\n")
+
 
 #
 # Now write this into the two files
@@ -896,28 +888,28 @@ basename = os.path.splitext(os.path.basename(args[0]))[0]
 if options.decl or options.both:
     f = open("%s/%s.h" % (options.destdir, basename), "w")
     f.write("#ifndef %s_H\n" % basename.upper())
-    f.write("#define %s_H\n\n" % basename.upper())
-    f.write("// automatically generated from %s\n\n" % args[0])
-    f.write("\n".join(h_include))
-    f.write("\n".join(h_classes))
-    f.write("\n".join(h_struct))
-    f.write("\n".join(h_container))
-    f.write("\n".join(h_model))
-    f.write("\n".join(h_view))
-    f.write("\n".join(h_dialog))
-    f.write("\n#endif\n")
+    f.write("#define %s_H\n" % basename.upper())
+    f.write("\n\n")
+    f.write("// automatically generated from %s" % args[0])
+    writeArr(f, h_include)
+    writeArr(f, h_classes)
+    writeArr(f, h_struct)
+    writeArr(f, h_container)
+    writeArr(f, h_model)
+    writeArr(f, h_view)
+    writeArr(f, h_dialog)
+    f.write("\n\n")
+    f.write("#endif\n")
 
 if options.impl or options.both:
     f = open("%s/%s.cpp" % (options.destdir, basename), "w")
     f.write("#include \"%s.h\"\n" % basename)
-    f.write("\n".join(c_include))
-    f.write("\n\n// automatically generated from %s\n\n" % args[0])
-    f.write("\n".join(c_container))
-    f.write("\n".join(c_col))
+    writeArr(f, c_include)
+    f.write("\n\n// automatically generated from %s\n" % args[0])
+    writeArr(f, c_container)
+    writeArr(f, c_col)
     if has_sort:
-        f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n\n")
-    f.write("\n".join(c_model))
-    f.write("\n".join(c_view))
-    if c_dialog:
-        f.write("\n\n")
-        f.write("\n".join(c_dialog))
+        f.write("static Qt::SortOrder sortOrder = Qt::AscendingOrder;\n")
+    writeArr(f, c_model)
+    writeArr(f, c_view)
+    writeArr(f, c_dialog)
