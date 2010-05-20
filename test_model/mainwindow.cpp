@@ -28,6 +28,7 @@ MainWindow::MainWindow()
 {
 	MYTRACE("MainWindow::MainWindow");
 	setupUi(this);
+	setWindowTitle("Model Test");
 
 	store("a",   ".-");
 	store("b",   "-...");
