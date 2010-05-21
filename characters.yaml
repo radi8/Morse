@@ -7,7 +7,14 @@ MorseCharacter:
   container:
     name: chars
     type: QList
+    # This generates a function to save the container as a CSV file
     save: true
+    # And this is the opposite, to load data from a CSV
+    load: true
+    # this is a code-piece to be called right before adding the record
+    # to the container. Can do initializations or checks. If the
+    # record should not be added, it can simply return.
+    load_code: loadSetNumber
   model:
     name: CharacterModel
     type: QAbstractTableModel
@@ -158,3 +165,6 @@ MorseCharacter:
       }
       while (s2.count() < 10)
           s2.append("a");
+
+    loadSetNumber: |
+      m.number = chars.count();

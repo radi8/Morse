@@ -37,6 +37,7 @@ c_view = []
 h_dialog = []
 c_dialog = []
 
+
 def get(dict, var, default=None):
     """Returns @dict[@var]" if it exists, otherwise returns the default."""
 
@@ -57,13 +58,17 @@ def appendCode(dest, indent, text):
     dest.append("%s// END custom code" % indent)
 
 
-def addInclude(arr, header):
+def addInclude(arr, header, local=False):
     """Adds an '#include <>' line to @arr, but only if it doesn't yet
     exist there."""
 
-    header = "#include <%s>" % header
+    if local:
+        header = "#include \"%s\"" % header
+    else:
+        header = "#include <%s>" % header
     if not header in arr:
         arr.append(header)
+
 
 def addClassRef(clazz):
     """Adds an 'class @clazz;' line to h_classes, but only if it
@@ -73,6 +78,7 @@ def addClassRef(clazz):
     header = "class %s;" % clazz
     if not header in h_classes:
         h_classes.append(header)
+
 
 def generateStruct(data):
     "Creates the struct that contains the data fields"
@@ -104,6 +110,9 @@ def generateContainer(data):
     c_container.append("%s<%s> %s;\n" % ( cont["type"], data["name"], cont["name"]) )
     if get(cont, "save"):
         generateContainerSave(data)
+    if get(cont, "load"):
+        generateContainerLoad(data)
+
 
 def generateContainerSave(data):
     cont = data["container"]
@@ -144,6 +153,114 @@ def generateContainerSave(data):
         n += 1
     c_container[-1] = "%s << \"\\n\";" % c_container[-1]
     c_container.append("\t}")
+    c_container.append("\tfile.close();")
+    c_container.append("\treturn true;")
+    c_container.append("}")
+
+
+def generateContainerLoad(data):
+    cont = data["container"]
+    code = data["code"]
+    name = cont["name"].capitalize()
+    global c_include
+    addInclude(c_include, "parse_csv.h", local=True)
+    global h_container
+    h_container.append("bool load%s(const QString &fname);" % name)
+    global c_container
+
+    c_container.append("class Parse%s : public ParseCSV" % name);
+    c_container.append("{");
+    c_container.append("public:");
+    c_container.append("\tParse%s(const QString &fname) : ParseCSV(fname) {};" % name);
+    c_container.append("\tvirtual void setData(int field, const QString &item);");
+    c_container.append("\tvirtual void saveRecord();");
+    c_container.append("");
+    c_container.append("\t%s m;" % data["name"]);
+    c_container.append("};");
+    c_container.append("");
+    c_container.append("void Parse%s::setData(int field, const QString &item)" %name);
+    c_container.append("{");
+    c_container.append("\tswitch (field) {");
+    n = 0
+    for field in data["fields"]:
+        if not get(field, "save", True):
+            continue
+        typ = get(field, "type")
+        if not typ:
+            continue
+        if typ == "QString":
+            c_container.append("\tcase %d: m.%s = item; break;" % (n, field["name"]));
+        elif typ in ("bool", "int"):
+            c_container.append("\tcase %d: m.%s = item.toInt(); break;" % (n, field["name"]));
+        elif typ == "quint32":
+            c_container.append("\tcase %d: m.%s = item.toUInt(); break;" % (n, field["name"]));
+        else:
+            print "unhandled type %s in load" % typ
+        n += 1
+    c_container.append("\t}");
+    c_container.append("}");
+    c_container.append("");
+    c_container.append("void Parse%s::saveRecord()" % name);
+    c_container.append("{");
+    if cont.has_key("load_code"):
+        appendCode(c_container, "\t", code[cont["load_code"]])
+
+    c_container.append("\tchars.append(m);");
+    c_container.append("}");
+    c_container.append("");
+    c_container.append("");
+    c_container.append("bool load%s(const QString &fname)" % name)
+    c_container.append("{");
+    c_container.append("        Parse%s parser(fname);" % name);
+    c_container.append("        return parser.parse();");
+    c_container.append("}");
+    return
+
+    n = 0
+    for field in data["fields"]:
+        if not get(field, "save", True):
+            continue
+        typ = get(field, "type")
+        if not typ:
+            continue
+        if n:
+            c_container.append("\t\t  >> c /*skip ',' */")
+            c_container.append("\t\t  >> c /* skip ' ' */")
+        else:
+            c_container.append("\t\tf")
+        n += 1
+        if typ in ("quint32",):
+            c_container.append("\t\t  >> m.%s" % field["name"])
+        elif typ == "bool":
+            c_container[-1] = "%s ;" % c_container[-1]
+            c_container.append("\t\t{")
+            c_container.append("\t\t\tint b;")
+            c_container.append("\t\t\tf >> b;")
+            c_container.append("\t\t\tm.%s = b;" % field["name"])
+            c_container.append("\t\t}")
+            n = 0
+        elif typ == "QString":
+            c_container.append("\t\t  >> c /* skip '\"' */")
+            c_container.append("\t\t  >> m.%s" % field["name"])
+            c_container.append("\t\t  >> c /* skip '\"' */")
+
+        # if n:
+        #     c_container.append("\t\tf >> c; // skip ','")
+        #     c_container.append("\t\tf >> c; // skip ' '")
+        # if typ in ("quint32",):
+        #     c_container.append("\t\tf >> m.%s;" % field["name"])
+        # elif typ == "bool":
+        #     c_container.append("\t\tf >> b;")
+        #     c_container.append("\t\tm.%s = b;" % field["name"])
+        # elif typ == "QString":
+        #     c_container.append("\t\tf >> c; // skip '\"'")
+        #     c_container.append("\t\tf >> m.%s;" % field["name"])
+        #     c_container.append("\t\tf >> c; // skip '\"'")
+        # else:
+        #     raise "can't save type %s" % typ
+    c_container[-1] = "%s;" % c_container[-1]
+    c_container.append("\t%s.append(m);" % cont["name"])
+    #c_container.append("\t}")
     c_container.append("\tfile.close();")
     c_container.append("\treturn true;")
     c_container.append("}")
