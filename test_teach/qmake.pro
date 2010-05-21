@@ -1,4 +1,5 @@
 TOPDIR = ..
+MVG_OPTIONS *= --no-model --no-view --no-dialog --no-save
 include($$TOPDIR/include.pri)
 
 CONFIG *= release
@@ -19,6 +20,9 @@ SOURCES *= $$TOPDIR/audiooutput.cpp
 HEADERS *= $$TOPDIR/audiooutput.h
 SOURCES *= $$TOPDIR/teach_morse.cpp
 HEADERS *= $$TOPDIR/teach_morse.h
+
+SOURCES *= $$TOPDIR/parse_csv.cpp
+MVG_YAML = $$TOPDIR/characters.yaml
 
 SOURCES *= mainwindow.cpp
 HEADERS *= mainwindow.h

@@ -146,7 +146,7 @@ private:
 	/*! \brief Current word spacing, normally 1.0. \sa setWordFactor() */
 	float wordFactor;
 
--	/*! \brief Translation from characters to morse-code */
+	/*! \brief Translation from characters to morse-code */
 	Morse codes;
 private slots:
 	void slotPlayNext();
