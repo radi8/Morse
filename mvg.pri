@@ -7,7 +7,7 @@ isEmpty(MVG_DIR):MVG_DIR = .
 isEmpty(MVG_SOURCES_DIR):MVG_SOURCES_DIR = $$MVG_DIR
 isEmpty(MVG_HEADERS_DIR):MVG_HEADERS_DIR = $$MVG_DIR
 
-mvg_decl.commands = $$QMAKE_MVG --decl --dir $$MVG_HEADERS_DIR ${QMAKE_FILE_IN}
+mvg_decl.commands = $$QMAKE_MVG --decl --dir $$MVG_HEADERS_DIR $$MVG_OPTIONS ${QMAKE_FILE_IN}
 #mvg_decl.dependency_type = TYPE_UI
 mvg_decl.output = $$MVG_HEADERS_DIR/${QMAKE_FILE_BASE}$${first(QMAKE_EXT_H)}
 mvg_decl.depends = $$MVG_BIN
@@ -18,7 +18,7 @@ mvg_decl.name = MVG Decl ${QMAKE_FILE_IN}
 silent:mvg_decl.commands = @echo mvg header ${QMAKE_FILE_IN} && $$mvg_decl.commands
 QMAKE_EXTRA_COMPILERS += mvg_decl
 
-mvg_impl.commands = $$QMAKE_MVG --impl --dir $$MVG_HEADERS_DIR ${QMAKE_FILE_IN}
+mvg_impl.commands = $$QMAKE_MVG --impl --dir $$MVG_HEADERS_DIR $$MVG_OPTIONS ${QMAKE_FILE_IN}
 #mvg_impl.dependency_type = TYPE_UI
 mvg_impl.output = $$MVG_SOURCES_DIR/${QMAKE_FILE_BASE}$${first(QMAKE_EXT_CPP)}
 mvg_impl.depends = $$MVG_HEADERS_DIR/${QMAKE_FILE_BASE}$${first(QMAKE_EXT_H)} $$MVG_BIN
@@ -29,7 +29,7 @@ silent:mvg_impl.commands = @echo mvg source ${QMAKE_FILE_IN} && $$mvg_impl.comma
 QMAKE_EXTRA_COMPILERS += mvg_impl
 
 load(moc)
-mvg_moc.commands = $$moc_header.commands
+mvg_moc.commands = $$moc_header.commands -nw
 mvg_moc.output = $$moc_header.output
 mvg_moc.depends = $$MVG_HEADERS_DIR/${QMAKE_FILE_BASE}$${first(QMAKE_EXT_H)}
 mvg_moc.input = MVG_HEADERS

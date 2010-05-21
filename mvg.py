@@ -98,7 +98,7 @@ def generateStruct(data):
     h_struct.append("};")
 
 
-def generateContainer(data):
+def generateContainer(options, data):
     "Creates the container (usually QLIst) that contains the structs."
 
     cont = data["container"]
@@ -108,9 +108,9 @@ def generateContainer(data):
     h_container.append("extern %s<%s> %s;\n" % (cont["type"], data["name"], cont["name"]) )
     global c_container
     c_container.append("%s<%s> %s;\n" % ( cont["type"], data["name"], cont["name"]) )
-    if get(cont, "save"):
+    if options.save and get(cont, "save"):
         generateContainerSave(data)
-    if get(cont, "load"):
+    if options.load and get(cont, "load"):
         generateContainerLoad(data)
 
 
@@ -950,6 +950,21 @@ parser.add_option("--decl",
 parser.add_option("--impl",
                   action="store_true", dest="impl", default=False,
                   help="generate implementation (*.cpp)")
+parser.add_option("--no-model",
+                  action="store_false", dest="model", default=True,
+                  help="don't generate a model")
+parser.add_option("--no-view",
+                  action="store_false", dest="view", default=True,
+                  help="don't generate a view")
+parser.add_option("--no-dialog",
+                  action="store_false", dest="dialog", default=True,
+                  help="don't generate an edit dialog")
+parser.add_option("--no-load",
+                  action="store_false", dest="load", default=True,
+                  help="don't generate CSV loading code")
+parser.add_option("--no-save",
+                  action="store_false", dest="save", default=True,
+                  help="don't generate CSV saving code")
 (options, args) = parser.parse_args()
 options.both = not options.decl and not options.impl
 if len(args) != 1:
@@ -975,19 +990,19 @@ for name in alldata:
         continue
     generateStruct(data)
     if data.has_key("container"):
-        generateContainer(data)
+        generateContainer(options, data)
     if not data.has_key("code"):
         data["code"] = {}
-    if data.has_key("model"):
+    if options.model and data.has_key("model"):
         if not data.has_key("container"):
             print "Warning: cannot generate model without container"
         else:
             generateModel(data)
-    if data.has_key("view"):
+    if options.view and data.has_key("view"):
         #if not data.has_key("model"):
         #    print "Warning: cannot generate view without model"
         generateView(data)
-    if data.has_key("dialog"):
+    if options.dialog and data.has_key("dialog"):
         generateDialog(data)
 
 

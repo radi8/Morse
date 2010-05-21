@@ -9,13 +9,13 @@ int main(int argc, char *argv[])
 {
 	QApplication app(argc, argv);
 
-	loadChars("characters.txt");
+	loadChars("../characters.csv");
 
 	MainWindow *main = new MainWindow();
 	main->show();
 
 	int res = app.exec();
-	saveChars("characters.txt");
+	saveChars("../characters.csv");
 
 	delete main;
 	return res;
