@@ -7,10 +7,14 @@
 #else
 #include "mainwindow.h"
 #endif
+#include "characters.h"
 
 int main(int argc, char *argv[])
 {
 	QApplication app(argc, argv);
+
+	loadChars("../characters.csv");
+
 #ifdef TEST_GEN_MORSE
 	GenerateMorse *gen_morse = new GenerateMorse();
 

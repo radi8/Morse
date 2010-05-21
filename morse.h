@@ -28,6 +28,14 @@
 class QTimer;
 
 
+class Morse {
+public:
+	//Morse();
+	bool contains(const QString &clearText) const;
+	const QString operator[] (const QString &clearText) const;
+};
+
+
 /*!
  * \brief Class to generate and play morse code
  */
@@ -37,12 +45,7 @@ class GenerateMorse : public QObject {
 public:
 	GenerateMorse(QObject *parent=0);
 	/*! Checks if the morse code for \c clearText exists */
-	bool exists(QString clearText) { return codes.contains(clearText); };
-private:
-	void store(const QString &sign, const QString &code);
-	/*! \brief Translation from characters to morse-code */
-	QHash<QString, QString> codes;
-public:
+	bool exists(const QString clearText) { return codes.contains(clearText); };
 	void append(const QString &s, bool addSpace=true);
 	void appendMorse(const QString &dahdits, const QString &clear);
 	int  totalElements(int from=0) const; //!< Total elements in \ref morse.
@@ -142,6 +145,9 @@ private:
 	float charFactor;
 	/*! \brief Current word spacing, normally 1.0. \sa setWordFactor() */
 	float wordFactor;
+
+-	/*! \brief Translation from characters to morse-code */
+	Morse codes;
 private slots:
 	void slotPlayNext();
 };

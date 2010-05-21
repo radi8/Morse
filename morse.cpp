@@ -31,8 +31,31 @@
 
 
 #include "morse.h"
+#include "characters.h"
 
 #include <QTimer>
+
+
+bool Morse::contains(const QString &clearText) const
+{
+	MYTRACE("Morse::contains(%s)", qPrintable(clearText));
+	foreach(MorseCharacter m, chars) {
+		MYVERBOSE("  at %s", qPrintable(m.sign));
+		if (m.sign == clearText)
+			return true;
+	}
+	return false;
+}
+
+const QString Morse::operator[] (const QString &clearText) const
+{
+	MYTRACE("Morse::operator[](%s)", qPrintable(clearText));
+	foreach(MorseCharacter m, chars) {
+		if (m.sign == clearText)
+			return m.code;
+	}
+	return QString::null;
+}
 
 
 /*!
@@ -61,103 +84,10 @@ GenerateMorse::GenerateMorse(QObject *parent)
 	, wordFactor(1)
 {
 	MYTRACE("GenerateMorse::GenerateMorse");
-	// http://www.qsl.net/dk5ke/wort.html
-	// http://de.wikipedia.org/wiki/Morsecode
-	store("a",   ".-");
-	store("b",   "-...");
-	store("c",   "-.-.");
-	store("d",   "-..");
-	store("e",   ".");
-	store("f",   "..-.");
-	store("g",   "--.");
-	store("h",   "....");
-	store("i",   "..");
-	store("j",   ".---");
-	store("k",   "-.-");
-	store("l",   ".-..");
-	store("m",   "--");
-	store("n",   "-.");
-	store("o",   "---");
-	store("p",   ".--.");
-	store("q",   "--.-");
-	store("r",   ".-.");
-	store("s",   "...");
-	store("t",   "-");
-	store("u",   "..-");
-	store("v",   "...-");
-	store("w",   ".--");
-	store("x",   "-..-");
-	store("y",   "-.--");
-	store("z",   "--..");
-	store("1",   ".----");
-	store("2",   "..---");
-	store("3",   "...--");
-	store("4",   "....-");
-	store("5",   ".....");
-	store("6",   "-....");
-	store("7",   "--...");
-	store("8",   "---..");
-	store("9",   "----.");
-	store("0",   "-----");
-	//store("*oA", ".--.-");
-	store("ä",   ".-.-");
-	store("ö",   "---.");
-	store("ü",   "..--");
-	store("*",   "--..--");
-	store(":",   "---...");
-	store(";",   "-.-.-.");
-	store("?",   "..--..");
-	store("-",   "-....-");
-	store("_",   "..--.-");
-	store("(",   "-.--.");
-	store(")",   "-.--.-");
-	store("'",   ".----.");
-	store("=",   "-...-");
-	store("+",   ".-.-.");
-	store("/",   "-..-.");
-	store("@",   ".--.-.");
-	store("CH",  "----");
-	// http://en.wikipedia.org/wiki/Prosigns_for_Morse_code
-	store("AR",  ".-.-.");    // end of message
-	store("AS",  ".-...");    // wait (followed by seconds)
-	store("BK",  "-···-·-");  // Break
-	store("BT",  "-..-.");    // separator within message, written as "="
-	store("CL",  "-·-··-··"); // going "off-the-air"
-	store("CT",  "-·-·-");    // beginning of message, same as KA
-	store("DO",  "-··---");   // shift to japanese wabun code
-	store("KN",  "-·--·");    // invite names station to send
-	store("SK",  "...-.-");   // end of contract
-	store("SN",  "...-.");    // understood
-	store("SO",  "...---..."); // SOS
-	store("VA",  "...-.-");   // same as SK
-	store("VE",  "...-.");    // same as SN
-	store("KA",  "-.-.-");    // same as CT
-	store("TV",  "-..-.");    // same as BT
-	store("HH",  "........"); // Error
-	store(" ",   " ");
 
 	playTimer = new QTimer(this);
 	playTimer->setSingleShot(true);
 	connect(playTimer, SIGNAL(timeout()), this, SLOT(slotPlayNext()) );
-}
-
-
-/*!
- * \brief Associate morse-code to cleartext
- *
- * @param sign  clear-text morse sign that should be stored, e.g. "n"
- * @param code  morse-encoding of \c sign using only one of the characters
- *              from ".- ", e.g. "-."
- */
-void GenerateMorse::store(const QString &sign, const QString &code)
-{
-	//MYTRACE("GenerateMorse::store('%s', '%s', '%s')",
-	//        qPrintable(sign), qPrintable(code), qPrintable(help));
-
-	if (codes.contains(sign))
-		qFatal("'%s' already defined as '%s'",
-		       qPrintable(sign), qPrintable(codes[sign]) );
-	codes[sign] = code;
 }
 
 
