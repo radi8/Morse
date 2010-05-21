@@ -108,6 +108,7 @@ void MorseScroller::paintEvent(QPaintEvent *e)
 	QPen penOn(Qt::black, 3);
 	QList<bool>::const_iterator i;
 	i = data.constEnd();
+	i--;
 	while (x > 0 && i != data.constBegin()) {
 		paint.setPen(*i ? penOn : penOff);
 		paint.drawPoint(x, 7);
